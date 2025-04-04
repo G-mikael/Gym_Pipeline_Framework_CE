@@ -22,4 +22,6 @@ class Dataframe:
         else:
             raise TypeError("Formato de dados não suportado.")
     
-    
+    def showncolumns(self, rows_number):
+        preview = [self.columns] + [[row[col] for col in self.columns] for row in self.data[:rows_number]]
+        return "\n".join(str(row) for row in preview)
