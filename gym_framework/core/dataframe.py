@@ -22,6 +22,39 @@ class Dataframe:
         else:
             raise TypeError("Formato de dados não suportado.")
     
-    def showncolumns(self, rows_number):
+    def showfirstrows(self, rows_number):
+        """
+        Mostrar as n primeiras linhas do dataframe
+        """
         preview = [self.columns] + [[row[col] for col in self.columns] for row in self.data[:rows_number]]
         return "\n".join(str(row) for row in preview)
+    
+    def showlastrows(self, rows_number):
+        """
+        Mostrar as n últimas linhas do dataframe
+        """
+        preview = [self.columns] + [[row[col] for col in self.columns] for row in self.data[-rows_number:]]
+        return "\n".join(str(row) for row in preview)
+    
+    def columns(self):
+        """
+        Lista todos os nomes das colunas do dataframe
+        """
+        return self.columns
+    
+    def get_column(self, column : str):
+        """
+        Listar itens de uma coluna específica
+        """
+        if isinstance(self.data[0], dict):
+            if column not in self.columns:
+                raise KeyError(f"Coluna '{column}' não encontrada.")
+            return [row[column] for row in self.data]
+        
+        else:
+            try:
+                col_index = self.columns.index(column)
+            except ValueError:
+                raise KeyError(f"Coluna '{column}' não encontrada.")
+            return [row[col_index] for row in self.data]
+            

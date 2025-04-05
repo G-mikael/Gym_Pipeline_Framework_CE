@@ -1,3 +1,3 @@
-from .dataframe import DataFrame
+from .dataframe import Dataframe
 
-__all__ = ["DataFrame"]
+__all__ = ["Dataframe"]
