@@ -42,19 +42,33 @@ class Dataframe:
         """
         return self.columns
     
-    def get_column(self, column : str):
+    def get_column(self, column: str):
         """
-        Listar itens de uma coluna específica
+        Listar itens de uma coluna específicada pelo usuário
         """
-        if isinstance(self.data[0], dict):
-            if column not in self.columns:
-                raise KeyError(f"Coluna '{column}' não encontrada.")
-            return [row[column] for row in self.data]
+        if column not in self.columns:
+            raise KeyError(f"Coluna '{column}' não encontrada.")
+        return [row[column] for row in self.data]
+    
+    def shape(self):
         
-        else:
-            try:
-                col_index = self.columns.index(column)
-            except ValueError:
-                raise KeyError(f"Coluna '{column}' não encontrada.")
-            return [row[col_index] for row in self.data]
+        rows_number = len(self.data)
+        columns_number = len(self.columns)
+        
+        return [rows_number, columns_number]
+    
+    def add_column(self, column_name : str, new_column_data : list):
+        try:
+            if len(new_column_data) != self.shape()[1]:
+                raise ValueError("O tamanho da nova coluna não corresponde ao número de linhas.")
             
+            self.columns.append(column_name)
+            for item, row in zip(new_column_data, self.data):
+                row[column_name] = item
+
+        except Exception as e:
+            print(f"Erro ao adicionar coluna: {e}")
+            
+    def add_row(self, data):
+        return True
+    
