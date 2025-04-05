@@ -54,3 +54,11 @@ print(df.shape(), "\n")
 print("Adicionando nova coluna ao dataframe: \n")
 df.add_column("Estado civíl", ["Casado", "Solteiro", "Casado", "Solteiro", "Casado", "Solteiro", "Casado", "Solteiro", "Casado", "Solteiro"])
 print(df.showfirstrows(5), "\n")
+
+print("Adicionando nova linha ao dataframe: \n")
+print(df.showlastrows(5), "\n")
+
+print(df.shape(), "\n")
+
+df.add_row(["Ana", 45, "Mossoró", "Solteiro"])
+print(df.showlastrows(5), "\n")
