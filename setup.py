@@ -11,5 +11,5 @@ setup(
         'Programming Language :: Python :: 3',
         'Operating System :: OS Independent',
     ],
-    python_requires='>=3.7', #Versão minima do python que aceitas dataclasses
+    python_requires='>=3.7', #minumum version that accept dataclasses
 )
