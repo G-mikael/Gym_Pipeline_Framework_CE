@@ -1,3 +1,5 @@
+import csv
+
 class Dataframe:
     def __init__(self, data=None, columns=None):
         """
@@ -123,5 +125,52 @@ class Dataframe:
             for old_col, new_col in rename_dict.items():
                 if old_col in row:
                     row[new_col] = row.pop(old_col)
+
+    def to_dict(self):
+        return self.data.copy()
+
+    def group_by(self, col):
+        if col not in self.columns:
+            raise KeyError(f"Coluna '{col}' não encontrada.")
+        groups = {}
+        for row in self.data:
+            key = row[col]
+            groups.setdefault(key, []).append(row)
+        return {k: Dataframe(v, self.columns.copy()) for k, v in groups.items()}
+
+    def sort_by(self, col, reverse=False):
+        if col not in self.columns:
+            raise KeyError(f"Coluna '{col}' não encontrada.")
+        sorted_data = sorted(self.data, key=lambda row: row[col], reverse=reverse)
+        return Dataframe(sorted_data, self.columns.copy())
+
+    def merge(self, other, on):
+        if on not in self.columns or on not in other.columns:
+            raise KeyError(f"Coluna '{on}' deve estar presente em ambos os dataframes.")
+        merged_data = []
+        for row in self.data:
+            match = next((r for r in other.data if r[on] == row[on]), None)
+            if match:
+                new_row = row.copy()
+                for key, value in match.items():
+                    if key != on:
+                        new_row[key] = value
+                merged_data.append(new_row)
+        merged_columns = list(set(self.columns + [col for col in other.columns if col != on]))
+        return Dataframe(merged_data, merged_columns)
+
+    def save_csv(self, path):
+        with open(path, "w", newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=self.columns)
+            writer.writeheader()
+            writer.writerows(self.data)
+
+    @staticmethod
+    def read_csv(path):
+        with open(path, "r", encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            data = [row for row in reader]
+            columns = reader.fieldnames
+        return Dataframe(data, columns)
     
     
