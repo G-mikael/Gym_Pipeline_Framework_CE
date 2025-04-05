@@ -172,5 +172,3 @@ class Dataframe:
             data = [row for row in reader]
             columns = reader.fieldnames
         return Dataframe(data, columns)
-    
-    
