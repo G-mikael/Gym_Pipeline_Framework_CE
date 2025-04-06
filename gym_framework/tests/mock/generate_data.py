@@ -5,6 +5,8 @@ from faker import Faker
 
 fake = Faker("pt_BR")  
 
+NUM_TRANSACTIONS = 5000
+
 MOEDAS = ["BRL", "USD", "EUR"]
 TRANSACOES = [
     "Alimentação",
@@ -54,10 +56,10 @@ def generate_transactions(n=1000, client_count=100, new=False):
             dias_atras = random.randint(31, 365)  # Entre 31 dias e 1 ano atrás
 
         transaction = {
-            "id": 5000 + i,
+            "id": NUM_TRANSACTIONS + i,
             "cliente_id": random.randint(0, client_count - 1),
             "data": (datetime.datetime.now() - datetime.timedelta(days=dias_atras)).strftime("%Y-%m-%d"),
-            "valor": round(random.uniform(10, 5000), 2),
+            "valor": round(random.uniform(10, NUM_TRANSACTIONS), 2),
             "moeda": random.choice(MOEDAS),
         }
 
@@ -110,8 +112,9 @@ def save_transactions_to_sqlite(transactions, db_name="mock_transactions.db"):
 
 def save_transactions_to_txt(transactions, filename="mock_new_transactions.txt"):
     with open(filename, "w", encoding="utf-8") as f:
+        f.write("id,cliente_id,data,valor,moeda\n")
         for t in transactions:
-            linha = f"{t['cliente_id']},{t['data']},{t['valor']},{t['moeda']}\n"
+            linha = f"{t['id']},{t['cliente_id']},{t['data']},{t['valor']},{t['moeda']}\n"
             f.write(linha)
     print(f"Arquivo TXT de transações gerado: {filename}")
 
@@ -135,7 +138,7 @@ def save_scores_to_csv(clients, filename="mock_score.csv"):
 
 if __name__ == "__main__":
     clients = generate_clients(100)
-    transactions = generate_transactions(1000, client_count=len(clients))
+    transactions = generate_transactions(NUM_TRANSACTIONS, client_count=len(clients))
     novas_transacoes = generate_transactions(200, client_count=len(clients), new=True)
     
     save_clients_to_sqlite(clients)
