@@ -127,9 +127,16 @@ class Dataframe:
                     row[new_col] = row.pop(old_col)
 
     def to_dict(self):
+        """
+        Retorna o conteúdo do dataframe no formato de lista de dicionários
+        """
         return self.data.copy()
 
     def group_by(self, col):
+        """
+        Gera multiplos dataframes agrupados por diferentes valores de uma coluna especificada
+        Os múltiplos dataframes são armazenados em um dicionario cujas chaves são os valores que estão agrupando os dados
+        """
         if col not in self.columns:
             raise KeyError(f"Coluna '{col}' não encontrada.")
         groups = {}
@@ -139,12 +146,18 @@ class Dataframe:
         return {k: Dataframe(v, self.columns.copy()) for k, v in groups.items()}
 
     def sort_by(self, col, reverse=False):
+        """
+        Ordena o dataframe em ordem crescente ou decrescente em ordem alfabética ou numérica dada uma coluna especificada
+        """
         if col not in self.columns:
             raise KeyError(f"Coluna '{col}' não encontrada.")
         sorted_data = sorted(self.data, key=lambda row: row[col], reverse=reverse)
         return Dataframe(sorted_data, self.columns.copy())
 
     def merge(self, other, on):
+        """
+        Faz um inner join de dois dataframes em uma coluna especificada
+        """
         if on not in self.columns or on not in other.columns:
             raise KeyError(f"Coluna '{on}' deve estar presente em ambos os dataframes.")
         merged_data = []
@@ -160,13 +173,31 @@ class Dataframe:
         return Dataframe(merged_data, merged_columns)
 
     def save_csv(self, path):
+        """
+        Salvar dataframe em um arquivo csv em um path especificado
+        """
         with open(path, "w", newline='', encoding='utf-8') as f:
             writer = csv.DictWriter(f, fieldnames=self.columns)
             writer.writeheader()
             writer.writerows(self.data)
+    
+    def apply_function_to_column(self, col, func):
+        """
+        Fazer cálculo matemático em certa coluna do dataframe
+        """
+        for row in self.data:
+            if col in row:
+                try:
+                    val = float(row[col])
+                    row[col] = func(val)
+                except (ValueError, TypeError):
+                    pass
 
     @staticmethod
     def read_csv(path):
+        """
+        Le um csv e retorna um dataframe
+        """
         with open(path, "r", encoding='utf-8') as f:
             reader = csv.DictReader(f)
             data = [row for row in reader]
