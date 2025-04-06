@@ -1,0 +1,22 @@
+from abc import ABC, abstractmethod
+from gym_framework.extractors.extractor import CSV_Extractor, DB_Extractor
+
+class BaseSource(ABC):
+    @abstractmethod
+    def get_extractor(self):
+        pass
+
+class CSVSource(BaseSource):
+    def __init__(self, filepath):
+        self.filepath = filepath
+
+    def get_extractor(self):
+        return CSV_Extractor(self.filepath)
+
+class DBSource(BaseSource):
+    def __init__(self, db_path, query):
+        self.db_path = db_path
+        self.query = query
+
+    def get_extractor(self):
+        return DB_Extractor(self.db_path, self.query)
