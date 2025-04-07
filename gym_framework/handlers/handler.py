@@ -1,11 +1,13 @@
-from .base_handler import BaseHandler
+from gym_framework.handlers.base_handler import BaseHandler
 import csv
 import time
 import unicodedata
 import re
 import multiprocessing
 from gym_framework.core.dataframe import Dataframe
-from .base_handler import BaseHandler
+from gym_framework.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 class NormalizerHandler(BaseHandler):
     def __init__(self, num_processes=None):
