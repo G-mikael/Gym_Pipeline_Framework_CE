@@ -5,30 +5,6 @@ import re
 import multiprocessing
 from gym_framework.core.dataframe import Dataframe
 from .base_handler import BaseHandler
-from gym_framework.sources.base_source import CSVSource, DBSource, TXTSource
-from pathlib import Path
-
-class ProdutoHandler(BaseHandler):
-    def handle(self, data):
-        time.sleep(1)
-        print("Extraindo dados...")
-        
-        BASE_DIR = Path(__file__).parent.resolve()
-
-        db_path = BASE_DIR / "mock_transactions.db"
-
-
-        print("\n=== Testando mock_transactions - clients ===")
-        query = "SELECT * FROM clients"
-        db_source = DBSource(db_path, query)
-        df_db = db_source.get_extractor()
-        df_db = df_db.extract()
-        print("Tipo: ", type(df_db))
-        print(df_db.showfirstrows(5))
-
-        print("1--------------------")
-
-        return df_db
 
 class NormalizerHandler(BaseHandler):
     def __init__(self, num_processes=None):
@@ -72,7 +48,8 @@ class LoaderHandler(BaseHandler):
     def handle(self, data):
         time.sleep(1)
         print("Carregando dados...")
-        print("Resultado final:", data)
+        print("Resultado final:", data[0])
+        print(data[0].showfirstrows(10))
 
         print("3--------------------")
 

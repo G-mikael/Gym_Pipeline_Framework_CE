@@ -30,11 +30,10 @@ if __name__ == "__main__":
     transactions_produto_node = HandlerNode("TransactionsDBProducerHandler", TransactionsDBProducerHandler())
     new_transactions_produto_node = HandlerNode("NewTransactionsTXTProducerHandler", NewTransactionsTXTProducerHandler())
 
-    produto_node = HandlerNode("ProdutoNode", ProdutoHandler())
     transformador_node = HandlerNode("NormalizerNode", NormalizerHandler(), dependencies=[client_produto_node])
     loader_node = HandlerNode("LoaderNode", LoaderHandler(), dependencies=[transformador_node])
 
-    pipeline = PipelineExecutor([score_produto_node, client_produto_node, transactions_produto_node, new_transactions_produto_node, produto_node, transformador_node, loader_node])
+    pipeline = PipelineExecutor([score_produto_node, client_produto_node, transactions_produto_node, new_transactions_produto_node, transformador_node, loader_node])
     pipeline.run()
 
     print("Pipeline finalizado.")

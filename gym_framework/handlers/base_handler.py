@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from multiprocessing import Queue
+import time
 
 
 class BaseHandler(ABC):
@@ -47,9 +48,12 @@ class HandlerNode:
             # Caso seja um nó de início, gera os dados
             data = None
 
+        start_time = time.perf_counter()
         result = self.handler.handle(data)
+        end_time = time.perf_counter()
 
         for _, queue in self.output_queues:
             queue.put(result)
 
-        print(f"[{self.name}] Finalizou.")
+        elapsed = end_time - start_time
+        print(f"[{self.name}] Finalizou em {elapsed:.4f} segundos.")
