@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     # Gerar 1.000.000 registros falsos
     print("🧪 Gerando dados simulados...")
-    fake_data = [{"nome": f"Rua São João número {i}", "endereco": f"Avenida Brasil apartamento {i}"} for i in range(1000000)]
+    fake_data = [{"nome": f"Rua São João número {i}", "endereco": f"Avenida Brasil apartamento {i}"} for i in range(1000)]
 
     # Testar com diferentes números de processos
     print("\n=== Teste de Desempenho - Normalização Paralela ===")
@@ -28,3 +28,5 @@ if __name__ == "__main__":
     test_with_processes(fake_data, 2)
     test_with_processes(fake_data, 4)
     test_with_processes(fake_data, multiprocessing.cpu_count())  # máximo disponível
+
+
