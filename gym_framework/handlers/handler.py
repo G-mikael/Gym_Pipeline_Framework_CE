@@ -5,6 +5,7 @@ import re
 import multiprocessing
 from gym_framework.core.dataframe import Dataframe
 from .base_handler import BaseHandler
+import random
 
 class NormalizerHandler(BaseHandler):
     def __init__(self, num_processes=None):
@@ -52,3 +53,38 @@ class LoaderHandler(BaseHandler):
         print(data.showfirstrows(10))
         
         return True
+    
+class ClassifierHandler(BaseHandler):
+    def handle(self, data):
+        TRANSACOES = [
+        "Alimentação",
+        "Transporte",
+        "Educação",
+        "Saúde",
+        "Lazer",
+        "Moradia",
+        "Compras",
+        "Transferências",
+        "Salário",
+        "Outros"]
+
+        # Função para adicionar uma coluna com transações aleatórias
+        def add_random_transaction_column(df, column_name="Transacao"):
+            random_transactions = [random.choice(TRANSACOES) for _ in range(len(df.data))]
+            df.add_column(column_name, random_transactions)
+
+        # Exemplo de uso:
+        add_random_transaction_column(data)
+
+        return data
+    
+class SaveToFileHandler(BaseHandler):
+    def handle(self, data, file_path = "dataframe.csv"):
+        """
+        Salva o dataframe em um arquivo CSV.
+        :param data: O dataframe que será salvo.
+        :param file_path: O caminho do arquivo CSV onde o dataframe será salvo.
+        """
+        # Chama o método save_csv para salvar o dataframe no arquivo
+        data.save_csv(file_path)
+        print(f"Dataframe salvo com sucesso em {file_path}")

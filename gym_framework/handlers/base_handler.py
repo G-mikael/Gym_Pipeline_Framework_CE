@@ -37,21 +37,18 @@ class HandlerNode:
         print(f"[{self.name}] Iniciando...")
 
         if node_queue:
-            # Espera dados de todas as dependências
             data = node_queue.get() 
-            # Junta se tiver múltiplas entradas
         else:
-            # Caso seja um nó de início, gera os dados
             data = None
 
         start_time = time.perf_counter()
         result = self.handler.handle(data)
         end_time = time.perf_counter()
 
-        print(f"{self.name} - Output Nodes----------{self.output_nodes}----------")
+        #print(f"{self.name} - Output Nodes----------{self.output_nodes}----------")
 
         for name, dep_node in self.output_nodes:
-            print(f"{self.name} adicionando na fila de {name}")
+            #print(f"{self.name} adicionando na fila de {name}")
             for i in range(1):
                 queue[name].put(result)
                 pipeline_queue.put(name)

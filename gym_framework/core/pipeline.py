@@ -57,9 +57,12 @@ if __name__ == "__main__":
 
     transformador_node = HandlerNode("NormalizerNode", NormalizerHandler(), dependencies=[client_produto_node])
     loader_node = HandlerNode("LoaderNode", LoaderHandler(), dependencies=[transformador_node])
+    classifier_node = HandlerNode("ClassifierHandler", ClassifierHandler(), dependencies=[new_transactions_produto_node])
+    save_node = HandlerNode("SaveToFileHandler", SaveToFileHandler(), dependencies=[classifier_node])
+
 
     pipeline = PipelineExecutor([score_produto_node, client_produto_node, transactions_produto_node, new_transactions_produto_node],
-                                [transformador_node, loader_node])
+                                [transformador_node, loader_node, classifier_node, save_node])
     pipeline.start()
 
     print("Pipeline finalizado.")
