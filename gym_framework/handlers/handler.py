@@ -1,4 +1,5 @@
 from .base_handler import BaseHandler
+import csv
 import time
 import unicodedata
 import re
@@ -90,3 +91,64 @@ class LoaderHandler(BaseHandler):
         print("3--------------------")
 
         return True
+
+class FilterHandler(BaseHandler):
+    def __init__(self, condition_func):
+        self.condition_func = condition_func  # Função que recebe uma linha (dict) e retorna True/False
+
+    def handle(self, df: Dataframe) -> Dataframe:
+        filtered_data = [row for row in df.data if self.condition_func(row)]
+        return Dataframe(filtered_data, df.columns)
+
+class ColumnSelectorHandler(BaseHandler):
+    def __init__(self, selected_columns):
+        self.selected_columns = selected_columns
+
+    def handle(self, df: Dataframe) -> Dataframe:
+        filtered_data = [{col: row[col] for col in self.selected_columns if col in row} for row in df.data]
+        return Dataframe(filtered_data, self.selected_columns)
+
+"""class DataFrameSinkHandler(BaseHandler):
+    def __init__(self, output_dict=None, name="resultado"):
+        self.output_dict = output_dict
+        self.name = name
+
+    def handle(self, df: Dataframe):
+        if self.output_dict is not None:
+            self.output_dict[self.name] = {
+                "data": df.data,
+                "columns": df.columns
+            }
+        return df"""
+
+class CSVLoaderHandler(BaseHandler):
+    def __init__(self, filepath="saida.csv"):
+        self.filepath = filepath
+
+    def handle(self, df: Dataframe):
+        with open(self.filepath, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=df.columns)
+            writer.writeheader()
+            writer.writerows(df.data)
+        return f"Arquivo salvo em {self.filepath}"
+
+class AggregatorHandler(BaseHandler):
+    def __init__(self, group_by_column, agg_column, agg_func):
+        self.group_by_column = group_by_column
+        self.agg_column = agg_column
+        self.agg_func = agg_func
+
+    def handle(self, df: Dataframe) -> Dataframe:
+        from collections import defaultdict
+
+        grouped = defaultdict(list)
+        for row in df.data:
+            key = row[self.group_by_column]
+            grouped[key].append(row[self.agg_column])
+
+        result = [
+            {self.group_by_column: key, self.agg_column: self.agg_func(values)}
+            for key, values in grouped.items()
+        ]
+
+        return Dataframe(result, [self.group_by_column, self.agg_column])
