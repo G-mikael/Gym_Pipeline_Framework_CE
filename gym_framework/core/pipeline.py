@@ -1,6 +1,7 @@
 from multiprocessing import Process
 from gym_framework.handlers.base_handler import HandlerNode
 from gym_framework.handlers.handler import *
+from gym_framework.handlers.producer import *
 
 
 
@@ -18,15 +19,22 @@ class PipelineExecutor:
         for p in processes:
             p.join()
 
+        print("FIM")
+
 
 if __name__ == "__main__":
     print("Iniciando pipeline...")
 
+    score_produto_node = HandlerNode("ScoreCSVProducerHandler", ScoreCSVProducerHandler())
+    client_produto_node = HandlerNode("ClientsDBProducerHandler", ClientsDBProducerHandler())
+    transactions_produto_node = HandlerNode("TransactionsDBProducerHandler", TransactionsDBProducerHandler())
+    new_transactions_produto_node = HandlerNode("NewTransactionsTXTProducerHandler", NewTransactionsTXTProducerHandler())
+
     produto_node = HandlerNode("ProdutoNode", ProdutoHandler())
-    transformador_node = HandlerNode("TransformadorNode", TransformadorHandler(), dependencies=[produto_node])
+    transformador_node = HandlerNode("NormalizerNode", NormalizerHandler(), dependencies=[client_produto_node])
     loader_node = HandlerNode("LoaderNode", LoaderHandler(), dependencies=[transformador_node])
 
-    pipeline = PipelineExecutor([produto_node, transformador_node, loader_node])
+    pipeline = PipelineExecutor([score_produto_node, client_produto_node, transactions_produto_node, new_transactions_produto_node, produto_node, transformador_node, loader_node])
     pipeline.run()
 
     print("Pipeline finalizado.")

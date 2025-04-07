@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from queue import Queue
-from multiprocessing import Lock, Event
+from multiprocessing import Queue
+
 
 class BaseHandler(ABC):
     @abstractmethod
@@ -16,39 +16,40 @@ class BaseHandler(ABC):
         """
         pass
 
+
 class HandlerNode:
     def __init__(self, name, handler: BaseHandler, dependencies=None):
         self.name = name
-        self.handler = handler  
+        self.handler = handler
         self.dependencies = dependencies or []
-        self.dependents = [] 
+
         self.input_queues = []
         self.output_queues = []
 
+        # Conecta as dependências
         for dep in self.dependencies:
             dep.add_dependent(self)
 
-    def add_dependent(self, dependent_node):
-        self.dependents.append(dependent_node)
-        # Cria uma fila de output para este dependente
-        q = Queue()
-        self.output_queues.append((dependent_node, q))
-        dependent_node.input_queues.append(q)
+    def add_dependent(self, node):
+        queue = Queue()
+        self.output_queues.append((node, queue))
+        node.input_queues.append(queue)
 
-    def run(self, data = None):
-        """O método para rodar o handler."""
-        #self.ready_event.wait()  # Bloqueia até o evento ser setado
-        print("Foi")
-        if self.dependencies:
+    def run(self):
+        print(f"[{self.name}] Iniciando...")
+
+        if self.input_queues:
+            # Espera dados de todas as dependências
             inputs = [q.get() for q in self.input_queues]
+            # Junta se tiver múltiplas entradas
+            data = inputs if len(inputs) == 1 else inputs
         else:
-            inputs = [data]
+            # Caso seja um nó de início, gera os dados
+            data = None
 
+        result = self.handler.handle(data)
 
-        result = self.handler.handle(inputs)
+        for _, queue in self.output_queues:
+            queue.put(result)
 
-        # Envia para os dependentes
-        for dep_node, q in self.output_queues:
-            q.put(result)
-
-        return result
+        print(f"[{self.name}] Finalizou.")
