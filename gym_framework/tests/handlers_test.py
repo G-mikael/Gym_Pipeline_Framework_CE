@@ -5,7 +5,7 @@ import os
 import unicodedata
 import re
 from gym_framework.core.dataframe import Dataframe
-from gym_framework.handlers.handler import NormalizerHandler, FilterHandler, ColumnSelectorHandler, AggregatorHandler, CSVLoaderHandler
+from gym_framework.handlers.handler import NormalizerHandler, FilterHandler, ColumnSelectorHandler, AggregatorHandler, CSVLoaderHandler, SinkHandler
 
 print("Preparando dados para testes...")
 
@@ -60,10 +60,14 @@ if os.path.exists("teste_output.csv"):
     with open("teste_output.csv", "r", encoding="utf-8") as f:
         print(f"\nConteúdo de teste_output.csv:\n{f.read()}")
 
-"""print("\n=== Teste DataFrameSinkHandler ===")
-manager = Manager()
-shared_dict = manager.dict()
-sink = DataFrameSinkHandler(shared_dict, "saida_pipeline")
-sink.handle(df)
-print("\nConteúdo no dicionário compartilhado:")
-print(shared_dict["saida_pipeline"])"""
+def sink_test():
+    print("\n=== Teste DataFrameSinkHandler ===")
+    manager = Manager()
+    shared_dict = manager.dict()
+    sink = SinkHandler(shared_dict, "saida_pipeline")
+    sink.handle(df)
+    print("\nConteúdo no dicionário compartilhado:")
+    print(shared_dict["saida_pipeline"])
+
+if __name__ == '__main__':
+    sink_test()

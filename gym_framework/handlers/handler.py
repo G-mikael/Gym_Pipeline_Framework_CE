@@ -39,11 +39,8 @@ class NormalizerHandler(BaseHandler):
         return new_row
 
     def handle(self, df: Dataframe) -> Dataframe:
-        data = df[0].to_dict()
-
-        normalized_data = [self.normalize_row(row) for row in data]
-
-        return Dataframe(normalized_data, df[0].columns)
+        normalized_data = [self.normalize_row(row) for row in df.data]
+        return Dataframe(normalized_data, df.columns)
 
 class LoaderHandler(BaseHandler):
     def handle(self, data):
@@ -72,7 +69,7 @@ class ColumnSelectorHandler(BaseHandler):
         filtered_data = [{col: row[col] for col in self.selected_columns if col in row} for row in df.data]
         return Dataframe(filtered_data, self.selected_columns)
 
-"""class DataFrameSinkHandler(BaseHandler):
+class SinkHandler(BaseHandler):
     def __init__(self, output_dict=None, name="resultado"):
         self.output_dict = output_dict
         self.name = name
@@ -83,7 +80,11 @@ class ColumnSelectorHandler(BaseHandler):
                 "data": df.data,
                 "columns": df.columns
             }
-        return df"""
+            print(f"[SinkHandler] Resultado armazenado em output_dict['{self.name}']")
+        else:
+            print("[SinkHandler] Nenhum dicionário de saída fornecido. Apenas imprimindo.")
+            print(df.showfirstrows(10))
+        return df
 
 class CSVLoaderHandler(BaseHandler):
     def __init__(self, filepath="saida.csv"):

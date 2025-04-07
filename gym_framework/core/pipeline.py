@@ -1,9 +1,5 @@
-from multiprocessing import Process
-from gym_framework.handlers.base_handler import HandlerNode
-from gym_framework.handlers.handler import *
-from gym_framework.handlers.producer import *
-
-
+import multiprocessing
+from multiprocessing import Process, Queue, Manager
 
 class PipelineExecutor:
     def __init__(self, nodes):
@@ -13,27 +9,54 @@ class PipelineExecutor:
         processes = []
         for node in self.nodes:
             p = Process(target=node.run)
-            processes.append(p)
             p.start()
+            processes.append(p)
 
         for p in processes:
             p.join()
 
-        print("FIM")
+class BalancedPipelineExecutor:
+    def __init__(self, handlers_config, max_workers=None):
+        self.handlers_config = handlers_config
+        self.max_workers = max_workers or multiprocessing.cpu_count()
 
+    def run(self):
+        manager = Manager()
+        result_dict = manager.dict()
 
-if __name__ == "__main__":
-    print("Iniciando pipeline...")
+        num_stages = len(self.handlers_config)
+        queues = [Queue() for _ in range(num_stages + 1)]
+        processes = []
+        used_workers = 0
 
-    score_produto_node = HandlerNode("ScoreCSVProducerHandler", ScoreCSVProducerHandler())
-    client_produto_node = HandlerNode("ClientsDBProducerHandler", ClientsDBProducerHandler())
-    transactions_produto_node = HandlerNode("TransactionsDBProducerHandler", TransactionsDBProducerHandler())
-    new_transactions_produto_node = HandlerNode("NewTransactionsTXTProducerHandler", NewTransactionsTXTProducerHandler())
+        for i, (handler_class, num_workers) in enumerate(self.handlers_config):
+            actual_workers = min(num_workers, self.max_workers - used_workers)
+            used_workers += actual_workers
 
-    transformador_node = HandlerNode("NormalizerNode", NormalizerHandler(), dependencies=[client_produto_node])
-    loader_node = HandlerNode("LoaderNode", LoaderHandler(), dependencies=[transformador_node])
+            for _ in range(actual_workers):
+                handler = handler_class(result_dict) if handler_class.__name__ == "LoaderHandler" else handler_class()
+                p = Process(target=self._worker, args=(handler, queues[i], queues[i+1] if i+1 < len(queues) else None))
+                p.start()
+                processes.append(p)
 
-    pipeline = PipelineExecutor([score_produto_node, client_produto_node, transactions_produto_node, new_transactions_produto_node, transformador_node, loader_node])
-    pipeline.run()
+        queues[0].put(None)  # Início do pipeline
 
-    print("Pipeline finalizado.")
+        # Sinal de parada
+        for q in queues:
+            for _ in range(self.max_workers):
+                q.put("STOP")
+
+        for p in processes:
+            p.join()
+
+        return result_dict.get("saida")
+
+    @staticmethod
+    def _worker(handler, input_queue, output_queue):
+        while True:
+            item = input_queue.get()
+            if item == "STOP":
+                break
+            result = handler.handle(item)
+            if output_queue:
+                output_queue.put(result)
