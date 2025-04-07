@@ -88,3 +88,29 @@ class SaveToFileHandler(BaseHandler):
         # Chama o método save_csv para salvar o dataframe no arquivo
         data.save_csv(file_path)
         print(f"Dataframe salvo com sucesso em {file_path}")
+
+
+class CalculateAverageGainHandler(BaseHandler):
+    def handle(self, data):
+        """
+        Escolhe um cliente aleatório e calcula o ganho médio das suas transações.
+        :param data: O dataframe contendo as transações.
+        """
+        # Seleciona um id aleatório do dataframe
+        print("Teste", type(data))
+
+        random_id = random.choice(data.get_column("id"))
+        
+        # Filtra as transações que pertencem ao cliente com o id selecionado
+        cliente_transacoes = data.filter_rows(lambda row: row["id"] == random_id)
+        
+        # Filtra apenas os valores das transações para calcular a média
+        valores = cliente_transacoes.get_column("valor")
+        valores = [float(valor) for valor in valores]
+        
+        if valores:
+            # Calcula o ganho médio
+            ganho_medio = sum(valores) / len(valores)
+            print(f"O cliente com id {random_id} tem um ganho médio de {ganho_medio:.2f}")
+        else:
+            print(f"O cliente com id {random_id} não possui transações registradas.")
