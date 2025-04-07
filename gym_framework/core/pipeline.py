@@ -17,9 +17,10 @@ class PipelineExecutor:
 
     def start(self):
         for productor in self.productores:
-            p = Process(target=productor.run, args=(None, self.queue, self.node_queue))
-            self.processes.append(p)
-            p.start()
+            for i in range(12):
+                p = Process(target=productor.run, args=(None, self.queue, self.node_queue))
+                self.processes.append(p)
+                p.start()
         
         self.run()
 
