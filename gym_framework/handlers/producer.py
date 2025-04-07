@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).parent.resolve()
 
 class ScoreCSVProducerHandler(BaseHandler):
     def handle(self, data=None):
-        time.sleep(1)
+        #time.sleep(1)
         print("[ScoreCSVProducerHandler] Extraindo dados de CSV...")
 
         csv_path = BASE_DIR / "mock_score.csv"
@@ -25,7 +25,7 @@ class ScoreCSVProducerHandler(BaseHandler):
 
 class ClientsDBProducerHandler(BaseHandler):
     def handle(self, data=None):
-        time.sleep(1)
+        #time.sleep(1)
         print("[ClientsDBProducerHandler] Extraindo dados de clients...")
 
         db_path = BASE_DIR / "mock_transactions.db"
@@ -42,7 +42,7 @@ class ClientsDBProducerHandler(BaseHandler):
 
 class TransactionsDBProducerHandler(BaseHandler):
     def handle(self, data=None):
-        time.sleep(1)
+        #time.sleep(1)
         print("[TransactionsDBProducerHandler] Extraindo dados de transactions...")
 
         db_path = BASE_DIR / "mock_transactions.db"
@@ -58,7 +58,7 @@ class TransactionsDBProducerHandler(BaseHandler):
 
 class NewTransactionsTXTProducerHandler(BaseHandler):
     def handle(self, data=None):
-        time.sleep(1)
+        #time.sleep(1)
         print("[NewTransactionsTXTProducerHandler] Extraindo dados do .txt...")
 
         txt_path = BASE_DIR / "mock_new_transactions.txt"

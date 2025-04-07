@@ -24,26 +24,22 @@ class HandlerNode:
         self.handler = handler
         self.dependencies = dependencies or []
 
-        self.input_queues = []
-        self.output_queues = []
+        self.output_nodes = []
 
         # Conecta as dependências
         for dep in self.dependencies:
             dep.add_dependent(self)
 
     def add_dependent(self, node):
-        queue = Queue()
-        self.output_queues.append((node, queue))
-        node.input_queues.append(queue)
+        self.output_nodes.append((node.name, node))
 
-    def run(self):
+    def run(self, node_queue = None, pipeline_queue = None, queue = None):
         print(f"[{self.name}] Iniciando...")
 
-        if self.input_queues:
+        if node_queue:
             # Espera dados de todas as dependências
-            inputs = [q.get() for q in self.input_queues]
+            data = node_queue.get() 
             # Junta se tiver múltiplas entradas
-            data = inputs if len(inputs) == 1 else inputs
         else:
             # Caso seja um nó de início, gera os dados
             data = None
@@ -52,8 +48,13 @@ class HandlerNode:
         result = self.handler.handle(data)
         end_time = time.perf_counter()
 
-        for _, queue in self.output_queues:
-            queue.put(result)
+        print(f"{self.name} - Output Nodes----------{self.output_nodes}----------")
+
+        for name, dep_node in self.output_nodes:
+            print(f"{self.name} adicionando na fila de {name}")
+            for i in range(1):
+                queue[name].put(result)
+                pipeline_queue.put(name)
 
         elapsed = end_time - start_time
         print(f"[{self.name}] Finalizou em {elapsed:.4f} segundos.")

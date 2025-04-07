@@ -38,19 +38,17 @@ class NormalizerHandler(BaseHandler):
         return new_row
 
     def handle(self, df: Dataframe) -> Dataframe:
-        data = df[0].to_dict()
+        data = df.to_dict()
 
         normalized_data = [self.normalize_row(row) for row in data]
 
-        return Dataframe(normalized_data, df[0].columns)
+        return Dataframe(normalized_data, df.columns)
 
 class LoaderHandler(BaseHandler):
     def handle(self, data):
         time.sleep(1)
         print("Carregando dados...")
-        print("Resultado final:", data[0])
-        print(data[0].showfirstrows(10))
-
-        print("3--------------------")
-
+        print("Resultado final:", data)
+        print(data.showfirstrows(10))
+        
         return True

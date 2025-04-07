@@ -2,24 +2,49 @@ from multiprocessing import Process
 from gym_framework.handlers.base_handler import HandlerNode
 from gym_framework.handlers.handler import *
 from gym_framework.handlers.producer import *
-
+from multiprocessing import Queue
+import queue  
 
 
 class PipelineExecutor:
-    def __init__(self, nodes):
+    def __init__(self, productores, nodes):
+        self.productores = productores
         self.nodes = nodes
+        self.node_queue = {node.name: Queue() for node in nodes}
+        self.node_list = {node.name: node for node in nodes}
+        self.queue = Queue()
+        self.processes = []
+
+    def start(self):
+        for productor in self.productores:
+            p = Process(target=productor.run, args=(None, self.queue, self.node_queue))
+            self.processes.append(p)
+            p.start()
+        
+        self.run()
 
     def run(self):
-        processes = []
-        for node in self.nodes:
-            p = Process(target=node.run)
-            processes.append(p)
-            p.start()
+        idle_time = 0
+        max_idle = 5  # segundos de espera antes de desistir
+        
+        while True:
+            try:
+                item = self.queue.get(timeout=1)  # espera por até 1s
+                idle_time = 0  # reset idle
+                node = self.node_list[item]
+                p = Process(target=node.run, args=(self.node_queue[node.name], self.queue, self.node_queue))
+                self.processes.append(p)
+                p.start()
+            except queue.Empty:
+                idle_time += 1
+                if idle_time >= max_idle:
+                    break
 
-        for p in processes:
+        for p in self.processes:
             p.join()
-
         print("FIM")
+
+
 
 
 if __name__ == "__main__":
@@ -33,7 +58,8 @@ if __name__ == "__main__":
     transformador_node = HandlerNode("NormalizerNode", NormalizerHandler(), dependencies=[client_produto_node])
     loader_node = HandlerNode("LoaderNode", LoaderHandler(), dependencies=[transformador_node])
 
-    pipeline = PipelineExecutor([score_produto_node, client_produto_node, transactions_produto_node, new_transactions_produto_node, transformador_node, loader_node])
-    pipeline.run()
+    pipeline = PipelineExecutor([score_produto_node, client_produto_node, transactions_produto_node, new_transactions_produto_node],
+                                [transformador_node, loader_node])
+    pipeline.start()
 
     print("Pipeline finalizado.")
