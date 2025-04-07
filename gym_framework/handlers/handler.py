@@ -97,7 +97,6 @@ class CalculateAverageGainHandler(BaseHandler):
         :param data: O dataframe contendo as transações.
         """
         # Seleciona um id aleatório do dataframe
-        print("Teste", type(data))
 
         random_id = random.choice(data.get_column("id"))
         
