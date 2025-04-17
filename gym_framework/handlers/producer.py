@@ -11,7 +11,7 @@ ID_CLIENT = NUM_CLIENTS
 
 
 class ScoreCSVProducerHandler(BaseHandler):
-    def handle(self, data=None, queue = None, dependencies = None, pipeline_queue = None):
+    def handle(self, context, data=None):
         #time.sleep(1)
         print("[ScoreCSVProducerHandler] Extraindo dados de CSV...")
 
@@ -23,11 +23,11 @@ class ScoreCSVProducerHandler(BaseHandler):
         # for row in df.data[:5]:
         #     print(row)
 
-        self.send(queue, df, dependencies)
+        self.send(context, df)
 
 
 class ClientsDBProducerHandler(BaseHandler):
-    def handle(self, data=None, queue = None, dependencies = None, pipeline_queue = None):
+    def handle(self, context, data=None):
         #time.sleep(1)
         print("[ClientsDBProducerHandler] Extraindo dados de clients...")
 
@@ -40,11 +40,11 @@ class ClientsDBProducerHandler(BaseHandler):
         # for row in df.data[:10]:
         #     print(row)
 
-        self.send(queue, df, dependencies)
+        self.send(context, df)
 
 
 class TransactionsDBProducerHandler(BaseHandler):
-    def handle(self, data=None, queue = None, dependencies = None, pipeline_queue = None):
+    def handle(self, context, data=None):
         #time.sleep(1)
         print("[TransactionsDBProducerHandler] Extraindo dados de transactions...")
 
@@ -56,11 +56,11 @@ class TransactionsDBProducerHandler(BaseHandler):
         # print("[TransactionsDBProducerHandler] Primeiras linhas:")
         # print(df.showfirstrows(10))
 
-        self.send(queue, df, dependencies)
+        self.send(context, df)
 
 
 class NewTransactionsTXTProducerHandler(BaseHandler):
-    def handle(self, data=None, queue = None, dependencies = None, pipeline_queue = None):
+    def handle(self, context, data=None):
         #time.sleep(1)
         print("[NewTransactionsTXTProducerHandler] Extraindo dados do .txt...")
 
@@ -71,7 +71,7 @@ class NewTransactionsTXTProducerHandler(BaseHandler):
         # print("[NewTransactionsTXTProducerHandler] Primeiras linhas:")
         # print(df.showfirstrows(10))
 
-        self.send(queue, df, dependencies)
+        self.send(context, df)
     
 
 
@@ -82,7 +82,7 @@ class TriggerTransactionsProducerHandler(BaseHandler):
         self.interval = 3
 
 
-    def handle(self, data=None, queue = None, dependencies = None, pipeline_queue = None):
+    def handle(self, context, data=None):
 
         while True:
             time.sleep(self.interval)
@@ -94,11 +94,7 @@ class TriggerTransactionsProducerHandler(BaseHandler):
 
             self.id_transaction += self.new_transactions
 
-            self.send(queue, df_dict, dependencies)
-
-            if pipeline_queue is not None:
-                for name, _ in dependencies:
-                    pipeline_queue.put(name)
+            self.send(context, df_dict)
 
 
 
