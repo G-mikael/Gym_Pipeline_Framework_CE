@@ -17,7 +17,7 @@ class PipelineExecutor:
 
     def start(self):
         for productor in self.productores:
-            for i in range(12):
+            for i in range(1):
                 p = Process(target=productor.run, args=(None, self.queue, self.node_queue))
                 self.processes.append(p)
                 p.start()
@@ -55,15 +55,17 @@ if __name__ == "__main__":
     client_produto_node = HandlerNode("ClientsDBProducerHandler", ClientsDBProducerHandler())
     transactions_produto_node = HandlerNode("TransactionsDBProducerHandler", TransactionsDBProducerHandler())
     new_transactions_produto_node = HandlerNode("NewTransactionsTXTProducerHandler", NewTransactionsTXTProducerHandler())
+    trigger_transactions_produto_node = HandlerNode("TriggerTransactionsProducerHandler", TriggerTransactionsProducerHandler())
+
 
     transformador_node = HandlerNode("NormalizerNode", NormalizerHandler(), dependencies=[client_produto_node])
     loader_node = HandlerNode("LoaderNode", LoaderHandler(), dependencies=[transformador_node])
-    classifier_node = HandlerNode("ClassifierHandler", ClassifierHandler(), dependencies=[new_transactions_produto_node])
+    classifier_node = HandlerNode("ClassifierHandler", ClassifierHandler(), dependencies=[new_transactions_produto_node, trigger_transactions_produto_node])
     save_node = HandlerNode("SaveToFileHandler", SaveToFileHandler(), dependencies=[classifier_node])
     calculete_node = HandlerNode("CalculateAverageGainHandler", CalculateAverageGainHandler(), dependencies=[classifier_node])
 
 
-    pipeline = PipelineExecutor([score_produto_node, client_produto_node, transactions_produto_node, new_transactions_produto_node],
+    pipeline = PipelineExecutor([score_produto_node, client_produto_node, transactions_produto_node, new_transactions_produto_node, trigger_transactions_produto_node],
                                 [transformador_node, loader_node, classifier_node, save_node, calculete_node])
     pipeline.start()
 

@@ -54,3 +54,10 @@ class TXT_Extractor(Extractor):
             columns = reader.fieldnames
 
         return Dataframe(data, columns)
+    
+class Dict_Extrator(Extractor):
+    def __init__(self, dict):
+        self.dict = dict
+
+    def extract(self):
+        return Dataframe(self.dict)

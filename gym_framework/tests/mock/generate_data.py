@@ -6,6 +6,8 @@ from faker import Faker
 fake = Faker("pt_BR")  
 
 NUM_TRANSACTIONS = 5000
+NUM_NEW_TRANSACTIONS = 200
+NUM_CLIENTS = 100
 
 MOEDAS = ["BRL", "USD", "EUR"]
 TRANSACOES = [
@@ -23,7 +25,7 @@ TRANSACOES = [
 
 
 # Geração de clientes simulados
-def generate_clients(n=100):
+def generate_clients(n=100, id_start = 0):
     clients = []
     for i in range(n):
         birth_date = fake.date_of_birth(minimum_age=20, maximum_age=80).strftime("%Y-%m-%d")    # Gera data de aniversário
@@ -36,7 +38,7 @@ def generate_clients(n=100):
         address = f"{space_before}{street_prefix} {fake.street_name()}, {random.randint(1, 9999)}{space_after}"
 
         client = {
-            "id": i,
+            "id": i + id_start + 1,
             "nome": fake.name(),
             "cpf": fake.cpf(),
             "data_nascimento": birth_date,
@@ -47,7 +49,7 @@ def generate_clients(n=100):
 
 
 # Geração de transações
-def generate_transactions(n=1000, client_count=100, new=False):
+def generate_transactions(n=1000, client_count=100, new=False, id_start = 0):
     transactions = []
     for i in range(n):
         if new:
@@ -56,10 +58,10 @@ def generate_transactions(n=1000, client_count=100, new=False):
             dias_atras = random.randint(31, 365)  # Entre 31 dias e 1 ano atrás
 
         transaction = {
-            "id": NUM_TRANSACTIONS + i,
+            "id": id_start + i + 1,
             "cliente_id": random.randint(0, client_count - 1),
             "data": (datetime.datetime.now() - datetime.timedelta(days=dias_atras)).strftime("%Y-%m-%d"),
-            "valor": round(random.uniform(10, NUM_TRANSACTIONS), 2),
+            "valor": round(random.uniform(10, 5000), 2),
             "moeda": random.choice(MOEDAS),
         }
 
@@ -137,9 +139,9 @@ def save_scores_to_csv(clients, filename="mock_score.csv"):
 
 
 if __name__ == "__main__":
-    clients = generate_clients(100)
+    clients = generate_clients(NUM_CLIENTS)
     transactions = generate_transactions(NUM_TRANSACTIONS, client_count=len(clients))
-    novas_transacoes = generate_transactions(200, client_count=len(clients), new=True)
+    novas_transacoes = generate_transactions(NUM_NEW_TRANSACTIONS, len(clients), True, NUM_TRANSACTIONS)
     
     save_clients_to_sqlite(clients)
     save_transactions_to_sqlite(transactions)

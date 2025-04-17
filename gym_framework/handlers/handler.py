@@ -38,15 +38,15 @@ class NormalizerHandler(BaseHandler):
                 new_row[key] = value
         return new_row
 
-    def handle(self, df: Dataframe) -> Dataframe:
+    def handle(self, df: Dataframe, queue, dependencies, pipeline_queue = None):
         data = df.to_dict()
 
         normalized_data = [self.normalize_row(row) for row in data]
 
-        return Dataframe(normalized_data, df.columns)
+        self.send(queue, Dataframe(normalized_data, df.columns), dependencies)
 
 class LoaderHandler(BaseHandler):
-    def handle(self, data):
+    def handle(self, data, queue = None, dependencies = None, pipeline_queue = None):
         time.sleep(1)
         print("Carregando dados...")
         print("Resultado final:", data)
@@ -55,18 +55,10 @@ class LoaderHandler(BaseHandler):
         return True
     
 class ClassifierHandler(BaseHandler):
-    def handle(self, data):
+    def handle(self, data, queue, dependencies, pipeline_queue = None):
         TRANSACOES = [
-        "Alimentação",
-        "Transporte",
-        "Educação",
-        "Saúde",
-        "Lazer",
-        "Moradia",
-        "Compras",
-        "Transferências",
-        "Salário",
-        "Outros"]
+        "Alimentação", "Transporte", "Educação", "Saúde", "Lazer",
+        "Moradia", "Compras", "Transferências", "Salário", "Outros"]
 
         # Função para adicionar uma coluna com transações aleatórias
         def add_random_transaction_column(df, column_name="Transacao"):
@@ -76,10 +68,10 @@ class ClassifierHandler(BaseHandler):
         # Exemplo de uso:
         add_random_transaction_column(data)
 
-        return data
+        self.send(queue, data, dependencies)
     
 class SaveToFileHandler(BaseHandler):
-    def handle(self, data, file_path = "dataframe.csv"):
+    def handle(self, data, queue, dependencies, pipeline_queue = None, file_path = "dataframe.csv"):
         """
         Salva o dataframe em um arquivo CSV.
         :param data: O dataframe que será salvo.
@@ -91,7 +83,7 @@ class SaveToFileHandler(BaseHandler):
 
 
 class CalculateAverageGainHandler(BaseHandler):
-    def handle(self, data):
+    def handle(self, data, queue, dependencies, pipeline_queue = None):
         """
         Escolhe um cliente aleatório e calcula o ganho médio das suas transações.
         :param data: O dataframe contendo as transações.
@@ -111,5 +103,6 @@ class CalculateAverageGainHandler(BaseHandler):
             # Calcula o ganho médio
             ganho_medio = sum(valores) / len(valores)
             print(f"O cliente com id {random_id} tem um ganho médio de {ganho_medio:.2f}")
+            if queue: self.send(queue, ganho_medio, dependencies)
         else:
             print(f"O cliente com id {random_id} não possui transações registradas.")

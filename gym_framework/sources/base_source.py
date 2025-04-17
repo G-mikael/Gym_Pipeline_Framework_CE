@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from gym_framework.extractors.extractor import CSV_Extractor, DB_Extractor, TXT_Extractor
+from gym_framework.extractors.extractor import CSV_Extractor, DB_Extractor, TXT_Extractor, Dict_Extrator
 
 class BaseSource(ABC):
     @abstractmethod
@@ -28,3 +28,10 @@ class TXTSource(BaseSource):
 
     def get_extractor(self):
         return TXT_Extractor(self.filepath, delimiter=self.delimiter)
+    
+class DictSource(BaseSource):
+    def __init__(self, dict):
+        self.dict = dict
+
+    def get_extractor(self):
+        return Dict_Extrator(self.dict)
