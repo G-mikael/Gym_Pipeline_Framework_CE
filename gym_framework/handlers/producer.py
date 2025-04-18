@@ -61,15 +61,15 @@ class TransactionsDBProducerHandler(BaseHandler):
 
 class NewTransactionsTXTProducerHandler(BaseHandler):
     def handle(self, data=None):
-        #time.sleep(1)
         print("[NewTransactionsTXTProducerHandler] Extraindo dados do .txt...")
 
-        txt_path = BASE_DIR / "mock_new_transactions.txt"
+        if data is None:
+            txt_path = BASE_DIR / "mock_new_transactions.txt"
+        else:
+            txt_path = Path(data)
+
         txt_source = TXTSource(txt_path)
         df = txt_source.get_extractor().extract()
-
-        # print("[NewTransactionsTXTProducerHandler] Primeiras linhas:")
-        # print(df.showfirstrows(10))
 
         return df
     
@@ -95,6 +95,8 @@ class TriggerTransactionsProducerHandler(BaseHandler):
 
 
 if __name__ == "__main__":
+
+    print(BASE_DIR)
     
     cli = generate_clients(10, ID_CLIENT)
     trans = generate_transactions(10, ID_TRANS)

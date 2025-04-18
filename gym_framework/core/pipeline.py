@@ -24,11 +24,20 @@ class PipelineExecutor:
         
         self.run()
 
-    def enqueue_producer(self, handler_node: HandlerNode):
-        self.queue.put(handler_node.name)
+    def enqueue_producer(self, handler_node: HandlerNode, data = None):
+        name = handler_node.name
+        self.queue.put(name)
+        if data: self.node_queue[name].put(data)
 
-    def add_node(self, node):
+    def add_node(self, node, queue = False):
+        """Adiciono um nó a lista de nós do pipeline
+
+        Args:
+            node (HandlerNode): Nó de um handler
+            queue (bool, optional): Se o nó necessita de input ou não. Defaults to False.
+        """
         self.node_list[node.name] = node
+        if queue: self.node_queue[node.name] = Queue()
 
     def run(self):
         idle_time = 0
