@@ -11,24 +11,17 @@ class PipelineContext:
 
 class BaseHandler(ABC):
     @abstractmethod
-    def handle(self, data, context: PipelineContext):
+    def handle(self, data):
         """
         Método que deve ser implementado por todos os tratadores.
 
         Args:
             data: O dataframe ou estrutura de dados a ser transformado.
-            context: Objeto com [queue, dependencies, pipeline_queue]
-        """
-        self.send(data, context)
 
-    def send(self, context: PipelineContext, data):
+        Returns:
+            Dados transformados.
         """
-        Envia `data` para uma ou mais filas (se `queue` for uma lista).
-        """
-        for name, _ in context.dependencies:
-            context.queue[name].put(data)
-            context.pipeline_queue.put(name)
-            print(f"\tEnviado para [{name}]") # Tirar print do handler
+        pass
 
 
 class HandlerNode:
@@ -46,19 +39,30 @@ class HandlerNode:
     def add_dependent(self, node):
         self.output_nodes.append((node.name, node))
 
+    def send(self, context: PipelineContext, data):
+        """
+        Envia `data` para uma ou mais filas (se `queue` for uma lista).
+        """
+        for name, _ in context.dependencies:
+            context.queue[name].put(data)
+            context.pipeline_queue.put(name)
+            print(f"\tEnviado para [{name}]") # Tirar print do handler
+
     def run(self, node_queue = None, pipeline_queue = None, queue = None):
         print(f"[{self.name}] Iniciando...")
 
         if node_queue:
-            data = node_queue.get() 
+            data = node_queue.get()
         else:
             data = None
 
         context = PipelineContext(queue, self.output_nodes, pipeline_queue)
 
         start_time = time.perf_counter()
-        self.handler.handle(context, data)
+        result = self.handler.handle(data)
         end_time = time.perf_counter()
+
+        self.send(context, result)
 
         elapsed = end_time - start_time
         print(f"[{self.name}] Finalizou em {elapsed:.4f} segundos.")

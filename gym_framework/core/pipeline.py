@@ -24,6 +24,12 @@ class PipelineExecutor:
         
         self.run()
 
+    def enqueue_producer(self, handler_node: HandlerNode):
+        self.queue.put(handler_node.name)
+
+    def add_node(self, node):
+        self.node_list[node.name] = node
+
     def run(self):
         idle_time = 0
         max_idle = 5  # segundos de espera antes de desistir
@@ -32,8 +38,11 @@ class PipelineExecutor:
             try:
                 item = self.queue.get(timeout=1)  # espera por até 1s
                 idle_time = 0  # reset idle
-                node = self.node_list[item]
-                p = Process(target=node.run, args=(self.node_queue[node.name], self.queue, self.node_queue))
+
+                node = self.node_list.get(item, None)
+                input_queue = self.node_queue.get(node.name) if node else None
+
+                p = Process(target=node.run, args=(input_queue, self.queue, self.node_queue))
                 self.processes.append(p)
                 p.start()
             except queue.Empty:
@@ -55,17 +64,16 @@ if __name__ == "__main__":
     client_produto_node = HandlerNode("ClientsDBProducerHandler", ClientsDBProducerHandler())
     transactions_produto_node = HandlerNode("TransactionsDBProducerHandler", TransactionsDBProducerHandler())
     new_transactions_produto_node = HandlerNode("NewTransactionsTXTProducerHandler", NewTransactionsTXTProducerHandler())
-    trigger_transactions_produto_node = HandlerNode("TriggerTransactionsProducerHandler", TriggerTransactionsProducerHandler())
 
 
     transformador_node = HandlerNode("NormalizerNode", NormalizerHandler(), dependencies=[client_produto_node])
     loader_node = HandlerNode("LoaderNode", LoaderHandler(), dependencies=[transformador_node])
-    classifier_node = HandlerNode("ClassifierHandler", ClassifierHandler(), dependencies=[new_transactions_produto_node, trigger_transactions_produto_node])
+    classifier_node = HandlerNode("ClassifierHandler", ClassifierHandler(), dependencies=[new_transactions_produto_node])
     save_node = HandlerNode("SaveToFileHandler", SaveToFileHandler(), dependencies=[classifier_node])
     calculete_node = HandlerNode("CalculateAverageGainHandler", CalculateAverageGainHandler(), dependencies=[classifier_node])
 
 
-    pipeline = PipelineExecutor([score_produto_node, client_produto_node, transactions_produto_node, new_transactions_produto_node, trigger_transactions_produto_node],
+    pipeline = PipelineExecutor([score_produto_node, client_produto_node, transactions_produto_node, new_transactions_produto_node],
                                 [transformador_node, loader_node, classifier_node, save_node, calculete_node])
     pipeline.start()
 
