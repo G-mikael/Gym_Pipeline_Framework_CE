@@ -65,7 +65,7 @@ class RequestTrigger:
 if __name__ == "__main__":
     print("Iniciando pipeline...")
 
-    # Todos os nós normais
+    # Nós apenas produtores
     score_produto_node = HandlerNode("ScoreCSVProducerHandler", ScoreCSVProducerHandler())
     client_produto_node = HandlerNode("ClientsDBProducerHandler", ClientsDBProducerHandler())
     transactions_produto_node = HandlerNode("TransactionsDBProducerHandler", TransactionsDBProducerHandler())
@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
     # Executor
     pipeline = PipelineExecutor(
-        [score_produto_node, client_produto_node, transactions_produto_node, new_transactions_produto_node],
+        [],
         [transformador_node, loader_node, classifier_node, save_node, calculete_node]
     )
 
@@ -89,8 +89,17 @@ if __name__ == "__main__":
     trigger = TimerTrigger(trigger_transactions_produto_node, interval=3)
     trigger_process = trigger.start(pipeline)
 
-    request_trigger = RequestTrigger(new_transactions_produto_node) # Adicionar db e csv depois!
-    request_trigger_process = request_trigger.start(pipeline)
+    request_trigger_transactions_txt = RequestTrigger(new_transactions_produto_node)
+    request_trigger_transactions_txt_process = request_trigger_transactions_txt.start(pipeline)
+
+    request_trigger_score = RequestTrigger(score_produto_node, ".csv") 
+    request_trigger_score_process = request_trigger_score.start(pipeline)
+
+    request_trigger_client = RequestTrigger(client_produto_node, ".db")
+    request_trigger_client_process = request_trigger_client.start(pipeline)
+
+    request_trigger_transactions_db = RequestTrigger(transactions_produto_node, ".db")
+    request_trigger_transactions_db_process = request_trigger_transactions_db.start(pipeline)
 
 
     # Inicia pipeline

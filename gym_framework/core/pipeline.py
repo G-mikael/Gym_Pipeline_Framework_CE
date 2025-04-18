@@ -48,8 +48,9 @@ class PipelineExecutor:
                 item = self.queue.get(timeout=1)  # espera por até 1s
                 idle_time = 0  # reset idle
 
-                node = self.node_list.get(item, None)
-                input_queue = self.node_queue.get(node.name) if node else None
+                node = self.node_list[item]  
+                input_queue = self.node_queue.get(node.name)  
+
 
                 p = Process(target=node.run, args=(input_queue, self.queue, self.node_queue))
                 self.processes.append(p)

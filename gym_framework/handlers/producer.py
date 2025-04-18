@@ -15,13 +15,13 @@ class ScoreCSVProducerHandler(BaseHandler):
         #time.sleep(1)
         print("[ScoreCSVProducerHandler] Extraindo dados de CSV...")
 
-        csv_path = BASE_DIR / "mock_score.csv"
+        if data is None:
+            csv_path = BASE_DIR / "mock_score.csv"
+        else:
+            csv_path = Path(data)
+
         csv_source = CSVSource(csv_path)
         df = csv_source.get_extractor().extract()
-
-        # print("[ScoreCSVProducerHandler] Primeiras linhas:")
-        # for row in df.data[:5]:
-        #     print(row)
 
         return df
 
@@ -31,14 +31,14 @@ class ClientsDBProducerHandler(BaseHandler):
         #time.sleep(1)
         print("[ClientsDBProducerHandler] Extraindo dados de clients...")
 
-        db_path = BASE_DIR / "mock_transactions.db"
+        if data is None:
+            db_path = BASE_DIR / "mock_transactions.db"
+        else:
+            db_path = Path(data)
+
         query = "SELECT * FROM clients"
         db_source = DBSource(db_path, query)
         df = db_source.get_extractor().extract()
-
-        # print("[ClientsDBProducerHandler] Primeiras linhas:")
-        # for row in df.data[:10]:
-        #     print(row)
 
         return df
 
@@ -48,13 +48,15 @@ class TransactionsDBProducerHandler(BaseHandler):
         #time.sleep(1)
         print("[TransactionsDBProducerHandler] Extraindo dados de transactions...")
 
-        db_path = BASE_DIR / "mock_transactions.db"
+        if data is None:
+            db_path = BASE_DIR / "mock_transactions.db"
+        else:
+            db_path = Path(data)
+
+        
         query = "SELECT * FROM transactions"
         db_source = DBSource(db_path, query)
         df = db_source.get_extractor().extract()
-
-        # print("[TransactionsDBProducerHandler] Primeiras linhas:")
-        # print(df.showfirstrows(10))
 
         return df
 
