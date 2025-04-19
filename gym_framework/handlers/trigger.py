@@ -4,6 +4,12 @@ from gym_framework.handlers.handler import *
 from gym_framework.handlers.producer import *
 from multiprocessing import Process
 import os
+from gym_framework.tests.mock.generate_data import gerar_arquivos_txt_simulados
+from pathlib import Path
+from typing import Optional
+
+
+BASE_DIR = Path(__file__).parent.resolve()
 
 class BaseTrigger:
     def __init__(self, handler_node: HandlerNode, interval: float = None):
@@ -13,22 +19,27 @@ class BaseTrigger:
     def start(self, pipeline: "PipelineExecutor"):
         raise NotImplementedError
     
+
 class TimerTrigger(BaseTrigger):
+    def __init__(self, handler_node, interval=5, max_runs: Optional[int] = None):
+        super().__init__(handler_node, interval)
+        self.max_runs = max_runs
+
     @staticmethod
-    def trigger_loop(interval, pipeline, handler_node):
-        while True:
+    def trigger_loop(interval, max_runs, pipeline, handler_node):
+        runs = 0
+        while max_runs is None or runs < max_runs:
             time.sleep(interval)
             pipeline.enqueue_producer(handler_node)
+            runs += 1
+            print(f"[TimerTrigger] Executou {runs} vez(es)")
 
     def start(self, pipeline: "PipelineExecutor"):
         pipeline.add_node(self.handler_node)
-        p = Process(target=self.trigger_loop, args=(self.interval, pipeline, self.handler_node))
+        p = Process(target=self.trigger_loop, args=(self.interval, self.max_runs, pipeline, self.handler_node))
         p.start()
         return p
     
-from pathlib import Path
-
-BASE_DIR = Path(__file__).parent.resolve()
 
 class RequestTrigger:
     def __init__(self, handler_node, end = ".txt", watch_dir=BASE_DIR, poll_interval=2):
@@ -65,6 +76,9 @@ class RequestTrigger:
 if __name__ == "__main__":
     print("Iniciando pipeline...")
 
+    external_simulator_process = Process(target=gerar_arquivos_txt_simulados, args=(BASE_DIR,5,100))
+    external_simulator_process.start()
+
     # Nós apenas produtores
     score_produto_node = HandlerNode("ScoreCSVProducerHandler", ScoreCSVProducerHandler())
     client_produto_node = HandlerNode("ClientsDBProducerHandler", ClientsDBProducerHandler())
@@ -86,7 +100,7 @@ if __name__ == "__main__":
     )
 
     # Triggers
-    trigger = TimerTrigger(trigger_transactions_produto_node, interval=3)
+    trigger = TimerTrigger(trigger_transactions_produto_node, interval=3, max_runs=20)
     trigger_process = trigger.start(pipeline)
 
     request_trigger_transactions_txt = RequestTrigger(new_transactions_produto_node)
@@ -104,5 +118,7 @@ if __name__ == "__main__":
 
     # Inicia pipeline
     pipeline.start()
+
+    external_simulator_process.join()
 
     print("Pipeline finalizado.")

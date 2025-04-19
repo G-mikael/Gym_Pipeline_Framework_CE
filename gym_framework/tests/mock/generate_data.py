@@ -2,6 +2,9 @@ import sqlite3
 import random
 import datetime
 from faker import Faker
+import os
+import json
+import time
 
 fake = Faker("pt_BR")  
 
@@ -112,13 +115,13 @@ def save_transactions_to_sqlite(transactions, db_name="mock_transactions.db"):
     print(f"Banco de dados SQLite salvo como {db_name}")
 
 
-def save_transactions_to_txt(transactions, filename="mock_new_transactions.txt"):
+def save_transactions_to_txt(transactions, filename="mock_new_transactions.txt", print_message = True):
     with open(filename, "w", encoding="utf-8") as f:
         f.write("id,cliente_id,data,valor,moeda\n")
         for t in transactions:
             linha = f"{t['id']},{t['cliente_id']},{t['data']},{t['valor']},{t['moeda']}\n"
             f.write(linha)
-    print(f"Arquivo TXT de transações gerado: {filename}")
+    if print_message: print(f"Arquivo TXT de transações gerado: {filename}")
 
 import csv
 
@@ -136,6 +139,38 @@ def save_scores_to_csv(clients, filename="mock_score.csv"):
             writer.writerow([cpf, score, renda, limite, data_atualizacao])
     
     print(f"Arquivo CSV com score dos clientes gerado: {filename}")
+
+def gerar_arquivos_txt_simulados(output_dir="data/incoming", max_files=5, transactions_per_file=100, client_count=100,delay_range=(4, 10)):
+    os.makedirs(output_dir, exist_ok=True)
+
+    created_files = []
+
+    for i in range(max_files):
+        filename = f"trans_{int(time.time())}_{i}.txt"
+        filepath = os.path.join(output_dir, filename)
+
+        transactions = generate_transactions(
+            n=transactions_per_file,
+            client_count=client_count,
+            new=True,
+            id_start=i * transactions_per_file
+        )
+
+        # Usa sua função para salvar como CSV
+        save_transactions_to_txt(transactions, filepath, False)
+        created_files.append(filepath)
+
+        print(f"[Simulador externo] Arquivo criado: {filename}")
+        time.sleep(random.randint(*delay_range))
+
+    # Apagar arquivos após tempo (opcional)
+    time.sleep(5)
+    for file in created_files:
+        try:
+            os.remove(file)
+            print(f"[Simulador externo] Arquivo apagado: {file}")
+        except Exception as e:
+            print(f"[Erro ao apagar {file}]: {e}")
 
 
 if __name__ == "__main__":
