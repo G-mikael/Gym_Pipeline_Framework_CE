@@ -16,7 +16,7 @@ class BaseTrigger:
         self.handler_node = handler_node
         self.interval = interval
 
-    def start(self, pipeline: "PipelineExecutor"):
+    def start(self, pipeline: PipelineExecutor):
         raise NotImplementedError
     
 
@@ -41,19 +41,18 @@ class TimerTrigger(BaseTrigger):
         return p
     
 
-class RequestTrigger:
+class RequestTrigger(BaseTrigger):
     def __init__(self, handler_node, end = ".txt", watch_dir=BASE_DIR, poll_interval=2):
-        self.handler_node = handler_node
+        super().__init__(handler_node, interval=poll_interval)
         self.end = end
         self.watch_dir = watch_dir
-        self.poll_interval = poll_interval
         self.already_seen = set()
 
-    def start(self, pipeline):
+    def start(self, pipeline: PipelineExecutor):
         pipeline.add_node(self.handler_node, True)
         p = Process(
-            target=RequestTrigger.watch,
-            args=(self.handler_node, self.end, pipeline, self.watch_dir, self.poll_interval)
+            target=self.watch,
+            args=(self.handler_node, self.end, pipeline, self.watch_dir, self.interval)
         )
         p.start()
         return p

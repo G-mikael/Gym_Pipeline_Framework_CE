@@ -164,7 +164,7 @@ def gerar_arquivos_txt_simulados(output_dir="data/incoming", max_files=5, transa
         time.sleep(random.randint(*delay_range))
 
     # Apagar arquivos após tempo (opcional)
-    time.sleep(5)
+    time.sleep(20)
     for file in created_files:
         try:
             os.remove(file)
