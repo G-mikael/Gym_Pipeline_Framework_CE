@@ -7,9 +7,12 @@ from gym_framework.core.dataframe import Dataframe
 import random
 import csv
 from datetime import datetime
+import numpy as np
+from datetime import datetime
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import OneHotEncoder
-import numpy as np
+from sklearn.metrics import classification_report, accuracy_score
+from sklearn.model_selection import train_test_split
 import time
 
 
@@ -129,14 +132,18 @@ class RiskTransactionClassifierHandler:
     def _preprocessar(self, linhas, treinar_encoder=False):
         X_numerico = []
         moedas = []
+
         for row in linhas:
-            valor = float(row['valor'])
-            moeda = row['moeda']
-            data = datetime.strptime(row['data'], '%Y-%m-%d')
-            dia = data.weekday()
-            mes = data.month
-            X_numerico.append([valor, dia, mes])
-            moedas.append([moeda])
+            try:
+                valor = float(row['valor'])
+                moeda = row['moeda']
+                data = datetime.strptime(row['data'], '%Y-%m-%d')
+                dia = data.weekday()
+                mes = data.month
+                X_numerico.append([valor, dia, mes])
+                moedas.append([moeda])
+            except:
+                continue  # ignora linhas mal formatadas
 
         if treinar_encoder:
             moedas_cod = self.encoder.fit_transform(moedas)
@@ -145,24 +152,32 @@ class RiskTransactionClassifierHandler:
 
         return np.hstack([X_numerico, moedas_cod])
 
-    def treinar(self, arquivo_rotulado):
-        with open(arquivo_rotulado, 'r') as f:
-            reader = csv.DictReader(f)
-            linhas = list(reader)
-
+    def treinar(self, df_rotulado, test_size=0.2):
+        """
+        Treina o modelo com um Dataframe contendo a coluna 'suspeita'.
+        Separa automaticamente parte dos dados para teste.
+        """
+        linhas = df_rotulado.data
         X = self._preprocessar(linhas, treinar_encoder=True)
         y = np.array([int(row['suspeita']) for row in linhas])
-        self.modelo.fit(X, y)
 
-    def classificar_novas(self, arquivo_novo):
-        with open(arquivo_novo, 'r') as f:
-            reader = csv.DictReader(f)
-            novas = list(reader)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
 
-        X_novo = self._preprocessar(novas)
+        self.modelo.fit(X_train, y_train)
+
+        # Avaliação no teste
+        y_pred = self.modelo.predict(X_test)
+        print("===== AVALIAÇÃO NO CONJUNTO DE TESTE =====")
+        print("Acurácia:", accuracy_score(y_test, y_pred))
+        print("Relatório:\n", classification_report(y_test, y_pred))
+
+    def classificar_novas(self, df_novas):
+        """
+        Recebe um Dataframe de novas transações e adiciona a coluna 'suspeita'.
+        """
+        linhas = df_novas.data
+        X_novo = self._preprocessar(linhas)
         predicoes = self.modelo.predict(X_novo)
 
-        for row, pred in zip(novas, predicoes):
-            row['suspeita'] = int(pred)
-
-        return novas  
+        df_novas.add_column("suspeita", [int(p) for p in predicoes])
+        return df_novas  
