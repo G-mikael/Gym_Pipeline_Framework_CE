@@ -4,8 +4,21 @@ import unicodedata
 import re
 import multiprocessing
 from gym_framework.core.dataframe import Dataframe
-from .base_handler import BaseHandler
 import random
+import csv
+from datetime import datetime
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.preprocessing import OneHotEncoder
+import numpy as np
+import time
+
+
+class PipelineContext:
+    def __init__(self, queue, dependencies=None, pipeline_queue=None):
+        self.queue = queue
+        self.dependencies = dependencies or []
+        self.pipeline_queue = pipeline_queue
+
 
 class NormalizerHandler(BaseHandler):
     def __init__(self, num_processes=None):
@@ -106,3 +119,50 @@ class CalculateAverageGainHandler(BaseHandler):
         else:
             print(f"O cliente com id {random_id} não possui transações registradas.")
             return
+        
+
+class RiskTransactionClassifierHandler:
+    def __init__(self):
+        self.modelo = DecisionTreeClassifier()
+        self.encoder = OneHotEncoder(sparse=False, handle_unknown='ignore')
+
+    def _preprocessar(self, linhas, treinar_encoder=False):
+        X_numerico = []
+        moedas = []
+        for row in linhas:
+            valor = float(row['valor'])
+            moeda = row['moeda']
+            data = datetime.strptime(row['data'], '%Y-%m-%d')
+            dia = data.weekday()
+            mes = data.month
+            X_numerico.append([valor, dia, mes])
+            moedas.append([moeda])
+
+        if treinar_encoder:
+            moedas_cod = self.encoder.fit_transform(moedas)
+        else:
+            moedas_cod = self.encoder.transform(moedas)
+
+        return np.hstack([X_numerico, moedas_cod])
+
+    def treinar(self, arquivo_rotulado):
+        with open(arquivo_rotulado, 'r') as f:
+            reader = csv.DictReader(f)
+            linhas = list(reader)
+
+        X = self._preprocessar(linhas, treinar_encoder=True)
+        y = np.array([int(row['suspeita']) for row in linhas])
+        self.modelo.fit(X, y)
+
+    def classificar_novas(self, arquivo_novo):
+        with open(arquivo_novo, 'r') as f:
+            reader = csv.DictReader(f)
+            novas = list(reader)
+
+        X_novo = self._preprocessar(novas)
+        predicoes = self.modelo.predict(X_novo)
+
+        for row, pred in zip(novas, predicoes):
+            row['suspeita'] = int(pred)
+
+        return novas  
