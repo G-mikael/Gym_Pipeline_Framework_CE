@@ -75,7 +75,7 @@ class RequestTrigger(BaseTrigger):
 if __name__ == "__main__":
     print("Iniciando pipeline...")
 
-    paralelo = False
+    paralelo = True
 
     external_simulator_process = Process(target=gerar_arquivos_txt_simulados, args=(BASE_DIR,5,10000))
     external_simulator_process.start()
@@ -88,11 +88,23 @@ if __name__ == "__main__":
     trigger_transactions_produto_node = HandlerNode("TriggerTransactionsProducerHandler", TriggerTransactionsProducerHandler())
 
     # Restante dos nós
-    transformador_node = HandlerNode("NormalizerNode", NormalizerHandler(), dependencies=[client_produto_node], parallel=paralelo)
-    loader_node = HandlerNode("LoaderNode", LoaderHandler(), dependencies=[transformador_node])
-    classifier_node = HandlerNode("ClassifierHandler", ClassifierHandler(), dependencies=[new_transactions_produto_node, trigger_transactions_produto_node], parallel=paralelo)
-    save_node = HandlerNode("SaveToFileHandler", SaveToFileHandler(), dependencies=[classifier_node])
-    calculete_node = HandlerNode("CalculateAverageGainHandler", CalculateAverageGainHandler(), dependencies=[classifier_node])
+    transformador_node = HandlerNode("NormalizerNode",
+                                     NormalizerHandler(),
+                                     dependencies=[client_produto_node],
+                                     parallel=paralelo)
+    loader_node = HandlerNode("LoaderNode",
+                              LoaderHandler(),
+                              dependencies=[transformador_node])
+    classifier_node = HandlerNode("ClassifierHandler",
+                                  ClassifierHandler(),
+                                  dependencies=[new_transactions_produto_node, trigger_transactions_produto_node],
+                                  parallel=paralelo)
+    save_node = HandlerNode("SaveToFileHandler",
+                            SaveToFileHandler(),
+                            dependencies=[classifier_node])
+    calculete_node = HandlerNode("CalculateAverageGainHandler",
+                                 CalculateAverageGainHandler(),
+                                 dependencies=[classifier_node])
 
     # Executor
     pipeline = PipelineExecutor(
@@ -110,15 +122,22 @@ if __name__ == "__main__":
     request_trigger_score = RequestTrigger(score_produto_node, ".csv") 
     request_trigger_score_process = request_trigger_score.start(pipeline)
 
-    # request_trigger_client = RequestTrigger(client_produto_node, ".db")
-    # request_trigger_client_process = request_trigger_client.start(pipeline)
+    request_trigger_client = RequestTrigger(client_produto_node, ".db")
+    request_trigger_client_process = request_trigger_client.start(pipeline)
 
     request_trigger_transactions_db = RequestTrigger(transactions_produto_node, ".db")
     request_trigger_transactions_db_process = request_trigger_transactions_db.start(pipeline)
 
 
+    start_time = time.perf_counter()
+
     # Inicia pipeline
     pipeline.start()
+
+    end_time = time.perf_counter()
+    elapsed = end_time - start_time
+
+    print(f" Pipiline finalizou em {elapsed:.4f} segundos.")
 
     external_simulator_process.join()
 
