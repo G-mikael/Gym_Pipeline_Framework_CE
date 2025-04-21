@@ -38,3 +38,26 @@ class DB_Extractor(Extractor):
         conn.close()
         data = [dict(zip(columns, row)) for row in rows]
         return Dataframe(data, columns)
+    
+class TXT_Extractor(Extractor):
+    def __init__(self, filepath, delimiter=","):
+        self.filepath = filepath
+        self.delimiter = delimiter
+
+    def extract(self):
+        if not os.path.exists(self.filepath):
+            raise FileNotFoundError(f"Arquivo {self.filepath} não encontrado.")
+
+        with open(self.filepath, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f, delimiter=self.delimiter)
+            data = [row for row in reader]
+            columns = reader.fieldnames
+
+        return Dataframe(data, columns)
+    
+class Dict_Extrator(Extractor):
+    def __init__(self, dict):
+        self.dict = dict
+
+    def extract(self):
+        return Dataframe(self.dict)

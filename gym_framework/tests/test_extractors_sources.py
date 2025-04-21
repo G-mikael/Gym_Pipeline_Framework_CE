@@ -1,5 +1,5 @@
 from pathlib import Path
-from gym_framework.sources.base_source import CSVSource, DBSource
+from gym_framework.sources.base_source import CSVSource, DBSource, TXTSource
 
 BASE_DIR = Path(__file__).parent.resolve()
 csv_path = BASE_DIR / "clientes.csv"
@@ -19,3 +19,35 @@ df_db = db_source.get_extractor()
 df_db = df_db.extract()
 for row in df_db.data:
     print(row)
+
+csv_path = BASE_DIR / "mock_score.csv"
+db_path = BASE_DIR / "mock_transactions.db"
+txt_path = BASE_DIR / "mock_new_transactions.txt"
+
+print("\n=== Testando mock_score ===")
+csv_source = CSVSource(csv_path)
+df_csv = csv_source.get_extractor()
+df_csv = df_csv.extract()
+for row in df_csv.data[:5]:
+    print(row)
+
+print("\n=== Testando mock_transactions - clients ===")
+query = "SELECT * FROM clients"
+db_source = DBSource(db_path, query)
+df_db = db_source.get_extractor()
+df_db = df_db.extract()
+for row in df_db.data[:10]:
+    print(row)
+
+print("\n=== Testando mock_transactions - transactions ===")
+query = "SELECT * FROM transactions"
+db_source = DBSource(db_path, query)
+df_db = db_source.get_extractor()
+df_db = df_db.extract()
+print(df_db.showfirstrows(10))
+
+print("\n=== Testando txt_path ===")
+txt_source = TXTSource(txt_path)
+df_txt = txt_source.get_extractor()
+df_txt = df_txt.extract()
+print(df_txt.showfirstrows(10))

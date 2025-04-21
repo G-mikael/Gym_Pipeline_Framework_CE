@@ -2,8 +2,9 @@ import unicodedata
 import re
 import multiprocessing
 from gym_framework.core.dataframe import Dataframe
+from .base_handler import BaseHandler
 
-class NormalizerHandler:
+class NormalizerHandler(BaseHandler):
     def __init__(self, num_processes=None):
         self.num_processes = num_processes or multiprocessing.cpu_count()
         print(f"Using {self.num_processes} processes for normalization.")
@@ -37,7 +38,6 @@ class NormalizerHandler:
     def handle(self, df: Dataframe) -> Dataframe:
         data = df.to_dict()
 
-        with multiprocessing.Pool(processes=self.num_processes) as pool:
-            normalized_data = pool.map(self.normalize_row, data)
+        normalized_data = [self.normalize_row(row) for row in data]
 
         return Dataframe(normalized_data, df.columns)
