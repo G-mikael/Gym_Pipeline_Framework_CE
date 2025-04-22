@@ -17,11 +17,15 @@ Instale os requisitos com:
 pip install -r requirements.txt
 ```
 
-Ou manualmente:
+### 📦 Instalação do framework
+
+Para instalar o framework de forma editável (útil durante o desenvolvimento), execute:
 
 ```bash
-pip install faker
+pip install -e .
 ```
+
+> ⚠️ Certifique-se de rodar esse comando na **raiz do projeto**, onde está localizado o arquivo `setup.py`.
 
 ## Como Usar
 
