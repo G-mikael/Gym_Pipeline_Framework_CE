@@ -1,6 +1,7 @@
 from gym_framework.handlers.base_handler import HandlerNode
 from gym_framework.core.pipeline import PipelineExecutor
 from gym_framework.handlers.handler import *
+from gym_framework.handlers.metrics import *
 from gym_framework.handlers.producer import *
 from gym_framework.handlers.trigger import TimerTrigger, RequestTrigger
 from gym_framework.tests.mock.generate_data import gerar_arquivos_txt_simulados
@@ -51,15 +52,20 @@ if __name__ == "__main__":
     calculete_node = HandlerNode("CalculateAverageGainHandler",
                                  CalculateAverageGainHandler(),
                                  dependencies=[classifier_node])
+    # Adiciona o nó de métrica para calcular o número de transações mais frequentes
+    calculate_most_transactions_node = HandlerNode("CalculateMostTransactionsHandler",
+                                             CalculateMostTransactionsHandler(),
+                                             dependencies=[transformador_node])
+    
 
     # Executor
     pipeline = PipelineExecutor(
         [],
-        [transformador_node, loader_node, classifier_node, save_node_csv, calculete_node, risk_classifier_node]
+        [transformador_node, loader_node, classifier_node, save_node_csv, calculete_node, risk_classifier_node, calculate_most_transactions_node]
     )
 
     # Triggers
-    trigger = TimerTrigger(trigger_transactions_produto_node, interval=3, max_runs=5)
+    trigger = TimerTrigger(trigger_transactions_produto_node, interval=3, max_runs=1)
     trigger_process = trigger.start(pipeline)
 
     request_trigger_transactions_txt = RequestTrigger(new_transactions_produto_node, watch_dir=MOCKS_DIR)
