@@ -14,6 +14,8 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn.model_selection import train_test_split
 import time
+import pickle
+
 
 
 class PipelineContext:
@@ -124,12 +126,30 @@ class CalculateAverageGainHandler(BaseHandler):
             return
         
 
-class RiskTransactionClassifierHandler:
-    def __init__(self):
-        self.modelo = DecisionTreeClassifier()
-        self.encoder = OneHotEncoder(sparse=False, handle_unknown='ignore')
 
-    def _preprocessar(self, linhas, treinar_encoder=False):
+class RiskTransactionClassifierHandler(BaseHandler):
+    
+    """
+    Classe para classificar transações de risco usando um modelo de árvore de decisão.
+    """
+
+    def __init__(self, model_path="models/risk_model.pkl"):
+        self.model_path = model_path
+        self.modelo = None
+        self.encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+        self._carregar_modelo()
+
+    def _carregar_modelo(self):
+        try:
+            with open(self.model_path, "rb") as f:
+                pacote = pickle.load(f)
+                self.modelo = pacote["modelo"]
+                self.encoder = pacote["encoder"]
+            print("[RiskModelInferenceHandler] Modelo carregado com sucesso.")
+        except Exception as e:
+            print(f"[RiskModelInferenceHandler] Erro ao carregar modelo: {e}")
+
+    def _preprocessar(self, linhas):
         X_numerico = []
         moedas = []
 
@@ -142,42 +162,25 @@ class RiskTransactionClassifierHandler:
                 mes = data.month
                 X_numerico.append([valor, dia, mes])
                 moedas.append([moeda])
-            except:
-                continue  # ignora linhas mal formatadas
+            except Exception as e:
+                print(f"[RiskModelInferenceHandler] Erro em linha: {e}")
+                continue
 
-        if treinar_encoder:
-            moedas_cod = self.encoder.fit_transform(moedas)
-        else:
-            moedas_cod = self.encoder.transform(moedas)
-
+        moedas_cod = self.encoder.transform(moedas)
         return np.hstack([X_numerico, moedas_cod])
 
-    def treinar(self, df_rotulado, test_size=0.2):
-        """
-        Treina o modelo com um Dataframe contendo a coluna 'suspeita'.
-        Separa automaticamente parte dos dados para teste.
-        """
-        linhas = df_rotulado.data
-        X = self._preprocessar(linhas, treinar_encoder=True)
-        y = np.array([int(row['suspeita']) for row in linhas])
+    def classificar(self, df):
+        if self.modelo is None:
+            print("[RiskModelInferenceHandler] Modelo não carregado.")
+            return df
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+        X = self._preprocessar(df.data)
+        predicoes = self.modelo.predict(X)
+        df.add_column("suspeita", [int(p) for p in predicoes])
+        return df
 
-        self.modelo.fit(X_train, y_train)
+    def handle(self, df):
+        print("[RiskModelInferenceHandler] Classificando transações com modelo treinado...")
+        return self.classificar(df)
 
-        # Avaliação no teste
-        y_pred = self.modelo.predict(X_test)
-        print("===== AVALIAÇÃO NO CONJUNTO DE TESTE =====")
-        print("Acurácia:", accuracy_score(y_test, y_pred))
-        print("Relatório:\n", classification_report(y_test, y_pred))
 
-    def classificar_novas(self, df_novas):
-        """
-        Recebe um Dataframe de novas transações e adiciona a coluna 'suspeita'.
-        """
-        linhas = df_novas.data
-        X_novo = self._preprocessar(linhas)
-        predicoes = self.modelo.predict(X_novo)
-
-        df_novas.add_column("suspeita", [int(p) for p in predicoes])
-        return df_novas  
