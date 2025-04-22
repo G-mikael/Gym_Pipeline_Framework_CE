@@ -27,7 +27,5 @@ class CalculateMostTransactionsHandler(BaseHandler):
         # Recupera os dados completos desse indivíduo (pega a primeira linha associada ao ID)
         top_individual = grouped[top_id].data[0]
 
-        print(f"[CalculateMostTransactionsHandler] Indivíduo com mais transações: {top_individual}")
+        print(f"[CalculateMostTransactionsHandler] Indivíduo com mais transações -> ClientID: {top_individual["ClienteID"]} --- Número de transações:{sorted_counted[0]["count"]}")
         return top_individual
-
-    
