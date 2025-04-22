@@ -4,8 +4,26 @@ import unicodedata
 import re
 import multiprocessing
 from gym_framework.core.dataframe import Dataframe
-from .base_handler import BaseHandler
 import random
+import csv
+from datetime import datetime
+import numpy as np
+from datetime import datetime
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import classification_report, accuracy_score
+from sklearn.model_selection import train_test_split
+import time
+import pickle
+
+
+
+class PipelineContext:
+    def __init__(self, queue, dependencies=None, pipeline_queue=None):
+        self.queue = queue
+        self.dependencies = dependencies or []
+        self.pipeline_queue = pipeline_queue
+
 
 class NormalizerHandler(BaseHandler):
     def __init__(self, num_processes=None):
@@ -71,7 +89,10 @@ class ClassifierHandler(BaseHandler):
         return data
     
 class SaveToFileHandler(BaseHandler):
-    def handle(self, data, file_path = "dataframe.csv"):
+    # Pega data e hora atual
+    data_hora_atual = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Cria o nome do arquivo com base na data e hora atual
+    def handle(self, data, file_path = "transacoes_classificadas_{data_hora_atual}.csv"):
         """
         Salva o dataframe em um arquivo CSV.
         :param data: O dataframe que será salvo.
@@ -106,3 +127,64 @@ class CalculateAverageGainHandler(BaseHandler):
         else:
             print(f"O cliente com id {random_id} não possui transações registradas.")
             return
+        
+
+
+class RiskTransactionClassifierHandler(BaseHandler):
+    
+    """
+    Classe para classificar transações de risco usando um modelo de árvore de decisão.
+    """
+
+    def __init__(self, model_path="models/risk_model.pkl"):
+        self.model_path = model_path
+        self.modelo = None
+        self.encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+        self._carregar_modelo()
+
+    def _carregar_modelo(self):
+        try:
+            with open(self.model_path, "rb") as f:
+                pacote = pickle.load(f)
+                self.modelo = pacote["modelo"]
+                self.encoder = pacote["encoder"]
+            print("[RiskModelInferenceHandler] Modelo carregado com sucesso.")
+        except Exception as e:
+            print(f"[RiskModelInferenceHandler] Erro ao carregar modelo: {e}")
+
+    def _preprocessar(self, linhas):
+        X_numerico = []
+        moedas = []
+
+        for row in linhas:
+            try:
+                valor = float(row['valor'])
+                moeda = row['moeda']
+                data = datetime.strptime(row['data'], '%Y-%m-%d')
+                dia = data.weekday()
+                mes = data.month
+                X_numerico.append([valor, dia, mes])
+                moedas.append([moeda])
+            except Exception as e:
+                print(f"[RiskModelInferenceHandler] Erro em linha: {e}")
+                continue
+
+        moedas_cod = self.encoder.transform(moedas)
+        return np.hstack([X_numerico, moedas_cod])
+
+    def classificar(self, df):
+        if self.modelo is None:
+            print("[RiskModelInferenceHandler] Modelo não carregado.")
+            return df
+
+        X = self._preprocessar(df.data)
+        predicoes = self.modelo.predict(X)
+        df.add_column("suspeita", [int(p) for p in predicoes])
+        return df
+
+    def handle(self, df):
+        print(df.showfirstrows(10))
+        print("[RiskModelInferenceHandler] Classificando transações com modelo treinado...")
+        return self.classificar(df)
+
+
