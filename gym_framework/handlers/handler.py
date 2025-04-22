@@ -5,7 +5,7 @@ import re
 import multiprocessing
 from gym_framework.core.dataframe import Dataframe
 import random
-import csv
+import os
 from datetime import datetime
 import numpy as np
 from datetime import datetime
@@ -88,17 +88,19 @@ class ClassifierHandler(BaseHandler):
 
         return data
     
-class SaveToFileHandler(BaseHandler):
+class SaveToCSVHandler(BaseHandler):
     # Pega data e hora atual
     data_hora_atual = datetime.now().strftime("%Y%m%d_%H%M%S")
     # Cria o nome do arquivo com base na data e hora atual
-    def handle(self, data, file_path = f"transacoes_classificadas_{data_hora_atual}.csv"):
+    def handle(self, data, file_path = f"gym_framework/examples/results/transacoes_classificadas_{data_hora_atual}.csv"):
         """
         Salva o dataframe em um arquivo CSV.
         :param data: O dataframe que será salvo.
         :param file_path: O caminho do arquivo CSV onde o dataframe será salvo.
         """
         # Chama o método save_csv para salvar o dataframe no arquivo
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
         data.save_csv(file_path)
         print(f"Dataframe salvo com sucesso em {file_path}")
 
@@ -183,7 +185,7 @@ class RiskTransactionClassifierHandler(BaseHandler):
         return df
 
     def handle(self, df):
-        print(df.showfirstrows(10))
+        #print(df.showfirstrows(10))
         print("[RiskModelInferenceHandler] Classificando transações com modelo treinado...")
         return self.classificar(df)
 

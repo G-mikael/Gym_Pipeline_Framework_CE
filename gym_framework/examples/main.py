@@ -45,8 +45,8 @@ if __name__ == "__main__":
     risk_classifier_node = HandlerNode("RiskClassifierHandler", 
                                    RiskTransactionClassifierHandler(), 
                                    dependencies=[new_transactions_produto_node])
-    save_node = HandlerNode("SaveToFileHandler",
-                            SaveToFileHandler(),
+    save_node_csv = HandlerNode("SaveToCSVHandler",
+                            SaveToCSVHandler(),
                             dependencies=[risk_classifier_node])
     calculete_node = HandlerNode("CalculateAverageGainHandler",
                                  CalculateAverageGainHandler(),
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # Executor
     pipeline = PipelineExecutor(
         [],
-        [transformador_node, loader_node, classifier_node, save_node, calculete_node, risk_classifier_node]
+        [transformador_node, loader_node, classifier_node, save_node_csv, calculete_node, risk_classifier_node]
     )
 
     # Triggers
