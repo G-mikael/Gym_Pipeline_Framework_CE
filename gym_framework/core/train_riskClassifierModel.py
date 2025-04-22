@@ -23,12 +23,12 @@ def treinar_e_salvar_modelo(caminho_txt, caminho_modelo=MODELO_PATH):
     # Preprocessamento dos dados
     X_numerico = []
     moedas = []
-    
+    print(df_rotulado.data[0])
     for row in df_rotulado.data:
         try:
-            valor = float(row['Valor'])
-            moeda = row['Moeda']
-            data = datetime.strptime(row['Data'], '%Y-%m-%d')
+            valor = float(row['valor'])
+            moeda = row['moeda']
+            data = datetime.strptime(row['data'], '%Y-%m-%d')
             dia = data.weekday()
             mes = data.month
             X_numerico.append([valor, dia, mes])
@@ -39,10 +39,11 @@ def treinar_e_salvar_modelo(caminho_txt, caminho_modelo=MODELO_PATH):
     
     # Codificando a variável categórica 'Moeda'
     encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+    
     moedas_cod = encoder.fit_transform(moedas)
     
     X = np.hstack([X_numerico, moedas_cod])
-    y = np.array([int(row['Suspeita']) for row in df_rotulado.data])
+    y = np.array([int(row['suspeita']) for row in df_rotulado.data])
     
     # Divisão entre treino e teste
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)

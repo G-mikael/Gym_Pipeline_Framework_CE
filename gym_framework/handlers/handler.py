@@ -89,7 +89,10 @@ class ClassifierHandler(BaseHandler):
         return data
     
 class SaveToFileHandler(BaseHandler):
-    def handle(self, data, file_path = "dataframe.csv"):
+    # Pega data e hora atual
+    data_hora_atual = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Cria o nome do arquivo com base na data e hora atual
+    def handle(self, data, file_path = "transacoes_classificadas_{data_hora_atual}.csv"):
         """
         Salva o dataframe em um arquivo CSV.
         :param data: O dataframe que será salvo.
@@ -180,6 +183,7 @@ class RiskTransactionClassifierHandler(BaseHandler):
         return df
 
     def handle(self, df):
+        print(df.showfirstrows(10))
         print("[RiskModelInferenceHandler] Classificando transações com modelo treinado...")
         return self.classificar(df)
 
