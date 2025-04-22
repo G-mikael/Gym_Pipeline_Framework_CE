@@ -26,7 +26,10 @@ class BaseHandler(ABC):
         """
         pass
 
-    def message(self):
+    def pre_message(self):
+        pass
+
+    def pos_message(self, data):
         pass
 
 
@@ -97,7 +100,7 @@ class HandlerNode:
         else:
             data = None
 
-        self.handler.message()
+        self.handler.pre_message()
 
         context = PipelineContext(queue, self.output_nodes, pipeline_queue)
 
@@ -111,4 +114,6 @@ class HandlerNode:
         self.send(context, result)
 
         elapsed = end_time - start_time
-        print(f"[{self.name}] Finalizou em {elapsed:.4f} segundos.")
+
+        self.handler.pos_message(result)
+        print(f"[{self.name} | PID {pid}] Finalizou em {elapsed:.4f} segundos.")

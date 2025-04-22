@@ -1,6 +1,7 @@
 from gym_framework.handlers.base_handler import HandlerNode
 from gym_framework.core.pipeline import PipelineExecutor
 from gym_framework.handlers.handler import *
+from gym_framework.handlers.metrics import *
 from gym_framework.handlers.producer import *
 from gym_framework.handlers.trigger import TimerTrigger, RequestTrigger
 from gym_framework.tests.mock.generate_data import gerar_arquivos_txt_simulados
@@ -53,11 +54,24 @@ if __name__ == "__main__":
     calculete_node = HandlerNode("CalculateAverageGainHandler",
                                  CalculateAverageGainHandler(),
                                  dependencies=[classifier_node])
+    save_to_db_node = HandlerNode("SaveToDatabaseHandler",
+                                  SaveToDatabaseHandler(),
+                                  dependencies=[classifier_node])
+    # Adiciona o nó de métrica para calcular o número de transações mais frequentes
+    calculate_most_transactions_node = HandlerNode("CalculateMostTransactionsHandler",
+                                             CalculateMostTransactionsHandler(),
+                                             dependencies=[transactions_produto_node])
+    
+    # Adiciona o nó de métrica para contar o número de transações por tipo
+    transaction_type_count_node = HandlerNode("TransactionTypeCountHandler",
+                                              TransactionTypeCountHandler(),
+                                              dependencies=[classifier_node])    
 
     # Executor
     pipeline = PipelineExecutor(
         [],
-        [transformador_node, loader_node, classifier_node, save_node_csv, calculete_node, risk_classifier_node]
+        [transformador_node, loader_node, classifier_node, save_node_csv, calculete_node, 
+         risk_classifier_node, save_to_db_node, calculate_most_transactions_node, transaction_type_count_node]
     )
 
     # Triggers

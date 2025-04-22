@@ -1,4 +1,4 @@
-from .base_handler import BaseHandler
+from gym_framework.handlers.base_handler import BaseHandler
 import time
 import unicodedata
 import re
@@ -15,6 +15,7 @@ from sklearn.metrics import classification_report, accuracy_score
 from sklearn.model_selection import train_test_split
 import time
 import pickle
+import sqlite3
 
 
 
@@ -28,7 +29,7 @@ class PipelineContext:
 class NormalizerHandler(BaseHandler):
     def __init__(self, num_processes=None):
         self.num_processes = num_processes or multiprocessing.cpu_count()
-        print(f"Using {self.num_processes} processes for normalization.")
+        print(f"Using {self.num_processes} processes.")
 
     def normalize_text(self, text):
         text = unicodedata.normalize('NFD', text)
@@ -79,7 +80,7 @@ class ClassifierHandler(BaseHandler):
         "Moradia", "Compras", "Transferências", "Salário", "Outros"]
 
         # Função para adicionar uma coluna com transações aleatórias
-        def add_random_transaction_column(df, column_name="Transacao"):
+        def add_random_transaction_column(df, column_name="categoria"):
             random_transactions = [random.choice(TRANSACOES) for _ in range(len(df.data))]
             df.add_column(column_name, random_transactions)
 
@@ -191,4 +192,29 @@ class RiskTransactionClassifierHandler(BaseHandler):
         #print(df.showfirstrows(10))
         return self.classificar(df)
 
+class SaveToDatabaseHandler(BaseHandler):
+    def __init__(self, db_path=f"gym_framework/examples/results/transacoes.db", table_name=None):
+        self.db_path = db_path
+        self.table_name = table_name or f"transacoes_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
+    def handle(self, df):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # Cria a tabela dinamicamente com base nas colunas
+        columns_defs = []
+        for col in df.columns:
+            columns_defs.append(f'"{col}" TEXT')  # você pode melhorar o tipo dependendo dos dados
+        columns_sql = ", ".join(columns_defs)
+        cursor.execute(f'CREATE TABLE IF NOT EXISTS "{self.table_name}" ({columns_sql})')
+
+        # Insere os dados
+        for row in df.data:
+            values = [str(row.get(col, "")) for col in df.columns]
+            placeholders = ", ".join(["?"] * len(values))
+            cursor.execute(f'INSERT INTO "{self.table_name}" VALUES ({placeholders})', values)
+
+        conn.commit()
+        conn.close()
+        print(f"Tabela '{self.table_name}' salva no banco '{self.db_path}' com sucesso.")
+        return True
