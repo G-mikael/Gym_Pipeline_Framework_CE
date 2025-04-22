@@ -191,7 +191,7 @@ class RiskTransactionClassifierHandler(BaseHandler):
         return self.classificar(df)
 
 class SaveToDatabaseHandler(BaseHandler):
-    def __init__(self, db_path='file_path = f"gym_framework/examples/results/transacoes.db"', table_name=None):
+    def __init__(self, db_path=f"gym_framework/examples/results/transacoes.db", table_name=None):
         self.db_path = db_path
         self.table_name = table_name or f"transacoes_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
