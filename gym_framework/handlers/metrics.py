@@ -13,19 +13,40 @@ class CalculateMostTransactionsHandler(BaseHandler):
         print("[CalculateMostTransactionsHandler] Calculando o indivíduo com mais transações...")
 
         # Agrupa por ID (retorna um dict: {id: DataFrame})
-        grouped = df.group_by("ClienteID")
+        grouped = df.group_by("cliente_id")
 
         # Cria lista com (ID, quantidade de transações)
-        counted = [{"ClienteID": id_, "count": len(group.data)} for id_, group in grouped.items()]
+        counted = [{"cliente_id": id_, "count": len(group.data)} for id_, group in grouped.items()]
 
         # Ordena pela contagem em ordem decrescente
         sorted_counted = sorted(counted, key=lambda x: x["count"], reverse=True)
 
         # Pega o ID com mais transações
-        top_id = sorted_counted[0]["ClienteID"]
+        top_id = sorted_counted[0]["cliente_id"]
 
         # Recupera os dados completos desse indivíduo (pega a primeira linha associada ao ID)
         top_individual = grouped[top_id].data[0]
 
-        print(f"[CalculateMostTransactionsHandler] Indivíduo com mais transações -> ClientID: {top_individual["ClienteID"]} --- Número de transações:{sorted_counted[0]["count"]}")
+        print(f"[CalculateMostTransactionsHandler] Indivíduo com mais transações -> ClientID: {top_individual["cliente_id"]} --- Número de transações:{sorted_counted[0]["count"]}")
         return top_individual
+
+
+class TransactionTypeCountHandler(BaseHandler):
+    """
+    Classe para contar a quantidade de cada tipo de transação.
+    """
+
+    def handle(self, df):
+        print("[TransactionTypeCountHandler] Contando a quantidade de cada tipo de transação...")
+
+        # Agrupa pelas categorias de tipo de transação
+        grouped = df.group_by("categoria")
+
+        # Conta quantas transações existem por tipo
+        type_counts = [{"categoria": tipo, "quantidade": len(grupo.data)} for tipo, grupo in grouped.items()]
+
+        # Exibe os resultados
+        for tipo_count in type_counts:
+            print(f"[TransactionTypeCountHandler] Tipo: {tipo_count['categoria']} --- Quantidade: {tipo_count['quantidade']}")
+
+        return type_counts

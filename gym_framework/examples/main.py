@@ -60,11 +60,16 @@ if __name__ == "__main__":
                                              CalculateMostTransactionsHandler(),
                                              dependencies=[transactions_produto_node])
     
+    # Adiciona o nó de métrica para contar o número de transações por tipo
+    transaction_type_count_node = HandlerNode("TransactionTypeCountHandler",
+                                              TransactionTypeCountHandler(),
+                                              dependencies=[classifier_node])    
 
     # Executor
     pipeline = PipelineExecutor(
         [],
-        [transformador_node, loader_node, classifier_node, save_node_csv, calculete_node, risk_classifier_node, save_to_db_node, calculate_most_transactions_node]
+        [transformador_node, loader_node, classifier_node, save_node_csv, calculete_node, 
+         risk_classifier_node, save_to_db_node, calculate_most_transactions_node, transaction_type_count_node]
     )
 
     # Triggers

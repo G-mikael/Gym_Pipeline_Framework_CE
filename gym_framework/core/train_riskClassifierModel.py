@@ -54,9 +54,9 @@ def treinar_e_salvar_modelo(caminho_txt, caminho_modelo=MODELO_PATH):
     
     # Avaliação no conjunto de teste
     y_pred = modelo.predict(X_test)
-    print("===== AVALIAÇÃO NO CONJUNTO DE TESTE =====")
-    print("Acurácia:", accuracy_score(y_test, y_pred))
-    print("Relatório:\n", classification_report(y_test, y_pred))
+    # print("===== AVALIAÇÃO NO CONJUNTO DE TESTE =====")
+    # print("Acurácia:", accuracy_score(y_test, y_pred))
+    # print("Relatório:\n", classification_report(y_test, y_pred))
     
     # Salvando o modelo e o encoder
     os.makedirs(os.path.dirname(caminho_modelo), exist_ok=True)
