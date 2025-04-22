@@ -51,11 +51,14 @@ if __name__ == "__main__":
     calculete_node = HandlerNode("CalculateAverageGainHandler",
                                  CalculateAverageGainHandler(),
                                  dependencies=[classifier_node])
+    save_to_db_node = HandlerNode("SaveToDatabaseHandler",
+                                  SaveToDatabaseHandler(),
+                                  dependencies=[classifier_node])
 
     # Executor
     pipeline = PipelineExecutor(
         [],
-        [transformador_node, loader_node, classifier_node, save_node_csv, calculete_node, risk_classifier_node]
+        [transformador_node, loader_node, classifier_node, save_node_csv, calculete_node, risk_classifier_node, save_to_db_node]
     )
 
     # Triggers
