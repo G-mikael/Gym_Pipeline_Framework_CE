@@ -50,3 +50,24 @@ class TransactionTypeCountHandler(BaseHandler):
             print(f"[TransactionTypeCountHandler] Tipo: {tipo_count['categoria']} --- Quantidade: {tipo_count['quantidade']}")
 
         return type_counts
+
+class RiskPercentageHandler(BaseHandler):
+    """
+    Classe para calcular porcentagem de tranações suspeitas.
+    """
+    
+    def handle(self, df):
+        print("[PercentageHandler] Calculando porcentagem de transações suspeitas...")
+
+        # Conta o número total de transações
+        total_transactions = len(df.data)
+
+        # Conta o número de transações suspeitas
+        suspicious_transactions = len([row for row in df.data if int(row["suspeita"]) == 1])
+
+        # Calcula a porcentagem de transações suspeitas
+        percentage = (suspicious_transactions / total_transactions) * 100 if total_transactions > 0 else 0
+
+        print(f"[PercentageHandler] Porcentagem de transações suspeitas: {percentage:.2f}%")
+        return percentage
+

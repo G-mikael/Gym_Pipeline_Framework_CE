@@ -63,30 +63,38 @@ if __name__ == "__main__":
     # Adiciona o nó de métrica para contar o número de transações por tipo
     transaction_type_count_node = HandlerNode("TransactionTypeCountHandler",
                                               TransactionTypeCountHandler(),
-                                              dependencies=[classifier_node])    
+                                              dependencies=[classifier_node])  
+
+    # Adiciona o nó de métrica para calcular a porcentagem de transações suspeitas
+    risk_percentage_node = HandlerNode("RiskPercentageHandler",
+                                                RiskPercentageHandler(),
+                                                dependencies=[risk_classifier_node])
 
     # Executor
     pipeline = PipelineExecutor(
         [],
         [transformador_node, loader_node, classifier_node, save_node_csv, calculete_node, 
-         risk_classifier_node, save_to_db_node, calculate_most_transactions_node, transaction_type_count_node]
+         risk_classifier_node, save_to_db_node, calculate_most_transactions_node, transaction_type_count_node, 
+         risk_percentage_node]
+
     )
+    
 
     # Triggers
-    trigger = TimerTrigger(trigger_transactions_produto_node, interval=3, max_runs=1)
-    trigger_process = trigger.start(pipeline)
+    # trigger = TimerTrigger(trigger_transactions_produto_node, interval=3, max_runs=1)
+    # trigger_process = trigger.start(pipeline)
 
     request_trigger_transactions_txt = RequestTrigger(new_transactions_produto_node, watch_dir=MOCKS_DIR)
     request_trigger_transactions_txt_process = request_trigger_transactions_txt.start(pipeline)
 
-    request_trigger_score = RequestTrigger(score_produto_node, ".csv", watch_dir=MOCKS_DIR) 
-    request_trigger_score_process = request_trigger_score.start(pipeline)
+    # request_trigger_score = RequestTrigger(score_produto_node, ".csv", watch_dir=MOCKS_DIR) 
+    # request_trigger_score_process = request_trigger_score.start(pipeline)
 
-    request_trigger_client = RequestTrigger(client_produto_node, ".db", watch_dir=MOCKS_DIR)
-    request_trigger_client_process = request_trigger_client.start(pipeline)
+    # request_trigger_client = RequestTrigger(client_produto_node, ".db", watch_dir=MOCKS_DIR)
+    # request_trigger_client_process = request_trigger_client.start(pipeline)
 
-    request_trigger_transactions_db = RequestTrigger(transactions_produto_node, ".db", watch_dir=MOCKS_DIR)
-    request_trigger_transactions_db_process = request_trigger_transactions_db.start(pipeline)
+    # request_trigger_transactions_db = RequestTrigger(transactions_produto_node, ".db", watch_dir=MOCKS_DIR)
+    # request_trigger_transactions_db_process = request_trigger_transactions_db.start(pipeline)
 
 
     start_time = time.perf_counter()

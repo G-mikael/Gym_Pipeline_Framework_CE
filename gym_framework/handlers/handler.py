@@ -188,7 +188,8 @@ class RiskTransactionClassifierHandler(BaseHandler):
     def handle(self, df):
         #print(df.showfirstrows(10))
         print("[RiskModelInferenceHandler] Classificando transações com modelo treinado...")
-        return self.classificar(df)
+        df_classificado = self.classificar(df)
+        return df_classificado
 
 class SaveToDatabaseHandler(BaseHandler):
     def __init__(self, db_path=f"gym_framework/examples/results/transacoes.db", table_name=None):
