@@ -4,7 +4,7 @@ Aplicação prática dos conhecimentos adquiridos na matéria de Computação Es
 
 ## Descrição
 
-Este projeto implementa um framework de processamento de dados escalável, com arquitetura baseada em nós `HandlerNode`, seguindo a lógica de produtor-consumidor. Ele permite a construção de pipelines com extração, transformação e carga de dados de forma modular.
+Este projeto implementa um framework de **processamento de dados escalável**, com arquitetura baseada em nós `HandlerNode`, seguindo a lógica de produtor-consumidor. Ele permite a construção de pipelines com **extração, transformação, classificação, cálculo e persistência** de dados, de forma **modular e paralelizável**.
 
 ## ✅ Requisitos
 
@@ -25,7 +25,7 @@ pip install faker
 
 ## Como Usar
 
-### 1. Crie seus handlers
+### 1. Crie seus próprios Handlers
 
 Você pode criar seus próprios handlers herdando de `BaseHandler`. Por exemplo:
 
@@ -38,34 +38,60 @@ class MeuHandler(BaseHandler):
         return data
 ```
 
-### 2. Construa o pipeline
+### 2. Construa o pipeline com nós (`HandlerNode`)
+
+Para montar um pipeline, você precisa criar **nós de processamento** usando os handlers implementados. Cada nó é uma instância de `HandlerNode`, que representa uma etapa do pipeline. Você também define as **dependências** entre os nós, ou seja, quem depende de quem para começar a processar.
+
+Exemplo:
 
 ```python
-from gym_framework.core.pipeline import Pipeline
+from gym_framework.core.handler_node import HandlerNode
+from gym_framework.core.pipeline import PipelineExecutor
 from gym_framework.handlers import MeuHandler, OutroHandler
 
-pipeline = Pipeline()
-pipeline.add_handler("início", MeuHandler())
-pipeline.add_handler("fim", OutroHandler(), depends_on=["início"])
-pipeline.run()
+# Criação dos nós
+inicio_node = HandlerNode("Inicio", MeuHandler())
+meio_node = HandlerNode("Meio", OutroHandler(), dependencies=[inicio_node])
+fim_node = HandlerNode("Fim", OutroHandler(), dependencies=[meio_node])
+
+# Criação e execução do pipeline
+pipeline = PipelineExecutor(producer_nodes=[inicio_node], consumer_nodes=[meio_node, fim_node])
+pipeline.start()
 ```
 
+- `dependencies` define de quais nós aquele nó depende.
+- O pipeline executa os nós na ordem de acordo com essas dependências.
 
-### 🗂 Exemplo Pronto
+---
 
-Um exemplo funcional do uso do pipeline já está disponível no arquivo:
+
+## 🧪 Exemplo Completo
+
+Um exemplo completo de execução do pipeline com múltiplos produtores, transformadores, classificadores e salvadores de dados está disponível no arquivo:
 
 ```
-gym_framework/core/pipeline.py
+examples/main.py
 ```
 
-Esse arquivo demonstra como criar handlers, conectá-los em sequência e executar o pipeline completo. 
+Esse exemplo simula um cenário prático com múltiplos tipos de fontes de dados, uso de triggers (`TimerTrigger`, `RequestTrigger`).
 
-## 🧠 Modelo Entidade-Relacionamento
+Para rodar o exemplo, basta executar:
+
+```bash
+python examples/main.py
+```
+
+O resultado será um pipeline funcional que consome dados de arquivos e banco de dados simulados, realiza transformações e classificações.
+
+---
+
+## 🧠 Modelo Entidade-Relacionamento do exemplo
 
 ![Diagrama ER](gym_framework/docs/er_model.png)
 
-## 🔄 Fluxo do Pipeline
+---
+
+## 🔄 Fluxo do Pipeline de exemplo
 
 ![Fluxo do Pipeline](gym_framework/docs/pipeline_flow.png)
 
@@ -76,13 +102,17 @@ Esse arquivo demonstra como criar handlers, conectá-los em sequência e executa
 ```
 gym_framework/
 ├── core/          # Núcleo do framework (pipeline, dataframe, etc.)
-├── docs/          # Documentos
+├── docs/          # Documentos (diagramas, ER, etc.)
 ├── handlers/      # Handlers (processadores de dados)
-├── extractors/    # Ferramentas para extração de dados
-├── loaders/       # Ferramentas para carregamento de dados
-├── sources/       # Fontes de dados
+├── extractors/    # Módulos de extração de dados
+├── loaders/       # Módulos de carregamento de dados   
+examples/
+├── main.py        # Exemplo completo de uso do framework
+mocks/
+├── ...            # Arquivos simulados utilizados durante os testes
 ```
 
+---
 
 ## 👨‍💻 Autores
 

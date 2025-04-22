@@ -6,7 +6,7 @@ from gym_framework.tests.mock.generate_data import generate_clients, generate_tr
 
 BASE_DIR = Path(__file__).parent.resolve()
 
-ID_TRANS = NUM_TRANSACTIONS + NUM_NEW_TRANSACTIONS
+ID_TRANS = NUM_TRANSACTIONS + NUM_NEW_TRANSACTIONS + 50000
 ID_CLIENT = NUM_CLIENTS
 
 
