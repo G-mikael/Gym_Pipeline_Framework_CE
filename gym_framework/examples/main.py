@@ -47,7 +47,7 @@ if __name__ == "__main__":
                                    dependencies=[new_transactions_produto_node])
     save_node = HandlerNode("SaveToFileHandler",
                             SaveToFileHandler(),
-                            dependencies=[classifier_node, risk_classifier_node])
+                            dependencies=[risk_classifier_node])
     calculete_node = HandlerNode("CalculateAverageGainHandler",
                                  CalculateAverageGainHandler(),
                                  dependencies=[classifier_node])
