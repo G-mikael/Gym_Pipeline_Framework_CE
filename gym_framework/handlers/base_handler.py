@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+from multiprocessing import Pool, cpu_count
 import time
+from gym_framework.core.dataframe import Dataframe
 
 
 class PipelineContext:
@@ -25,10 +27,12 @@ class BaseHandler(ABC):
 
 
 class HandlerNode:
-    def __init__(self, name, handler: BaseHandler, dependencies=None):
+    def __init__(self, name, handler: BaseHandler, dependencies=None, parallel=False, chunks=4):
         self.name = name
         self.handler = handler
         self.dependencies = dependencies or []
+        self.parallel = parallel  # habilita paralelismo no handler
+        self.chunks = chunks      # em quantas partes dividir
 
         self.output_nodes = []
 
@@ -48,6 +52,38 @@ class HandlerNode:
             context.pipeline_queue.put(name)
             print(f"\tEnviado para [{name}]") # Tirar print do handler
 
+    def split_data(self, data):
+        """Divide um Dataframe em chunks iguais."""
+        if isinstance(data, Dataframe):
+            total = len(data.data)
+            chunk_size = max(1, total // self.chunks)
+            chunks = [
+                Dataframe(data.data[i:i + chunk_size], data.columns)
+                for i in range(0, total, chunk_size)
+            ]
+            return chunks
+        else:
+            return [data]  # fallback: sem split
+
+
+    def process_chunk(self, chunk):
+        """Função auxiliar para aplicar o handler em cada chunk."""
+        return self.handler.handle(chunk)
+
+    def parallel_handle(self, data):
+        chunks = self.split_data(data)
+        with Pool(processes=min(cpu_count(), self.chunks)) as pool:
+            results = pool.map(self.process_chunk, chunks)
+
+        if isinstance(data, Dataframe):
+            combined_data = []
+            for df in results:
+                combined_data.extend(df.data)
+            return Dataframe(combined_data, data.columns)
+        else:
+            return results
+
+
     def run(self, node_queue = None, pipeline_queue = None, queue = None):
         print(f"[{self.name}] Iniciando...")
 
@@ -59,7 +95,10 @@ class HandlerNode:
         context = PipelineContext(queue, self.output_nodes, pipeline_queue)
 
         start_time = time.perf_counter()
-        result = self.handler.handle(data)
+        if self.parallel:
+            result = self.parallel_handle(data)
+        else:
+            result = self.handler.handle(data)
         end_time = time.perf_counter()
 
         self.send(context, result)

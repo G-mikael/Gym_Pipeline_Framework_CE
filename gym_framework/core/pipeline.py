@@ -41,7 +41,7 @@ class PipelineExecutor:
 
     def run(self):
         idle_time = 0
-        max_idle = 5  # segundos de espera antes de desistir
+        max_idle = 11  # segundos de espera antes de desistir
         
         while True:
             try:
@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
     transformador_node = HandlerNode("NormalizerNode", NormalizerHandler(), dependencies=[client_produto_node])
     loader_node = HandlerNode("LoaderNode", LoaderHandler(), dependencies=[transformador_node])
-    classifier_node = HandlerNode("ClassifierHandler", ClassifierHandler(), dependencies=[new_transactions_produto_node])
+    classifier_node = HandlerNode("ClassifierHandler", ClassifierHandler(), dependencies=[new_transactions_produto_node], parallel= True)
     save_node = HandlerNode("SaveToFileHandler", SaveToFileHandler(), dependencies=[classifier_node])
     calculete_node = HandlerNode("CalculateAverageGainHandler", CalculateAverageGainHandler(), dependencies=[classifier_node])
 

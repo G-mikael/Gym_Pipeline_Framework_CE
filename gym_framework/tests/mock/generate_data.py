@@ -8,9 +8,9 @@ import time
 
 fake = Faker("pt_BR")  
 
-NUM_TRANSACTIONS = 5000
-NUM_NEW_TRANSACTIONS = 200
-NUM_CLIENTS = 100
+NUM_TRANSACTIONS = 500000
+NUM_NEW_TRANSACTIONS = 20000
+NUM_CLIENTS = 100000
 
 MOEDAS = ["BRL", "USD", "EUR"]
 TRANSACOES = [
@@ -28,26 +28,38 @@ TRANSACOES = [
 
 
 # Geração de clientes simulados
-def generate_clients(n=100, id_start = 0):
+def generate_clients(n=100, id_start=0):
     clients = []
-    for i in range(n):
+    used_cpfs = set()
+    i = 0
+    
+    while i < n:
+
+        cpf = fake.cpf()
+        if cpf in used_cpfs:
+            continue
+        used_cpfs.add(cpf)
+
         birth_date = fake.date_of_birth(minimum_age=20, maximum_age=80).strftime("%Y-%m-%d")    # Gera data de aniversário
         
         street_prefix = random.choice(["Rua", "Avenida", "Praça"])                              # Gera endereço não padronizado
-        # Adiciona alguns espaços extras aleatórios
-        space_before = " " * random.randint(0, 2)
+        
+        space_before = " " * random.randint(0, 2)       # Adiciona alguns espaços extras aleatórios
         space_after = " " * random.randint(0, 2)
+
         # Gera o endereço com variações
-        address = f"{space_before}{street_prefix} {fake.street_name()}, {random.randint(1, 9999)}{space_after}"
+        address = f"{space_before}{street_prefix} {fake.street_name()}, {random.randint(1, 9999)}{space_after}"     
 
         client = {
             "id": i + id_start + 1,
             "nome": fake.name(),
-            "cpf": fake.cpf(),
+            "cpf": cpf,
             "data_nascimento": birth_date,
             "endereco": address
         }
         clients.append(client)
+        i += 1
+
     return clients
 
 
@@ -145,6 +157,8 @@ def gerar_arquivos_txt_simulados(output_dir="data/incoming", max_files=5, transa
 
     created_files = []
 
+    id_start = NUM_TRANSACTIONS + NUM_NEW_TRANSACTIONS
+
     for i in range(max_files):
         filename = f"trans_{int(time.time())}_{i}.txt"
         filepath = os.path.join(output_dir, filename)
@@ -153,7 +167,7 @@ def gerar_arquivos_txt_simulados(output_dir="data/incoming", max_files=5, transa
             n=transactions_per_file,
             client_count=client_count,
             new=True,
-            id_start=i * transactions_per_file
+            id_start= id_start + (i * transactions_per_file)
         )
 
         # Usa sua função para salvar como CSV
@@ -164,7 +178,7 @@ def gerar_arquivos_txt_simulados(output_dir="data/incoming", max_files=5, transa
         time.sleep(random.randint(*delay_range))
 
     # Apagar arquivos após tempo (opcional)
-    time.sleep(20)
+    time.sleep(30)
     for file in created_files:
         try:
             os.remove(file)
