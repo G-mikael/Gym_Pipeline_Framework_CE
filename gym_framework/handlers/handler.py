@@ -92,7 +92,7 @@ class SaveToFileHandler(BaseHandler):
     # Pega data e hora atual
     data_hora_atual = datetime.now().strftime("%Y%m%d_%H%M%S")
     # Cria o nome do arquivo com base na data e hora atual
-    def handle(self, data, file_path = "transacoes_classificadas_{data_hora_atual}.csv"):
+    def handle(self, data, file_path = f"transacoes_classificadas_{data_hora_atual}.csv"):
         """
         Salva o dataframe em um arquivo CSV.
         :param data: O dataframe que será salvo.
