@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # Adiciona o nó de métrica para calcular o número de transações mais frequentes
     calculate_most_transactions_node = HandlerNode("CalculateMostTransactionsHandler",
                                              CalculateMostTransactionsHandler(),
-                                             dependencies=[transformador_node])
+                                             dependencies=[transactions_produto_node])
     
 
     # Executor
