@@ -80,7 +80,7 @@ class ClassifierHandler(BaseHandler):
         "Moradia", "Compras", "Transferências", "Salário", "Outros"]
 
         # Função para adicionar uma coluna com transações aleatórias
-        def add_random_transaction_column(df, column_name="Transacao"):
+        def add_random_transaction_column(df, column_name="categoria"):
             random_transactions = [random.choice(TRANSACOES) for _ in range(len(df.data))]
             df.add_column(column_name, random_transactions)
 
