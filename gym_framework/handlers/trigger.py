@@ -64,7 +64,7 @@ class RequestTrigger(BaseTrigger):
         already_seen = set()
         pid = os.getpid()
         print(f"[RequestTrigger | PID {pid}] Observando diretório: {watch_dir}")
-        
+
         checks = 0
         while True:
             if max_checks is not None and checks >= max_checks:
@@ -111,7 +111,7 @@ if __name__ == "__main__":
                                   dependencies=[new_transactions_produto_node, trigger_transactions_produto_node],
                                   parallel=paralelo)
     save_node = HandlerNode("SaveToFileHandler",
-                            SaveToFileHandler(),
+                            SaveToCSVHandler(),
                             dependencies=[classifier_node])
     calculete_node = HandlerNode("CalculateAverageGainHandler",
                                  CalculateAverageGainHandler(),
