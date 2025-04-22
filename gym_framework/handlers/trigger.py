@@ -28,11 +28,12 @@ class TimerTrigger(BaseTrigger):
     @staticmethod
     def trigger_loop(interval, max_runs, pipeline, handler_node):
         runs = 0
+        pid = os.getpid()
         while max_runs is None or runs < max_runs:
             time.sleep(interval)
             pipeline.enqueue_producer(handler_node)
             runs += 1
-            print(f"[TimerTrigger] Executou {runs} vez(es)")
+            print(f"[TimerTrigger  | PID {pid}] Executou {runs} vez(es)")
 
     def start(self, pipeline: "PipelineExecutor"):
         pipeline.add_node(self.handler_node)
@@ -42,33 +43,43 @@ class TimerTrigger(BaseTrigger):
     
 
 class RequestTrigger(BaseTrigger):
-    def __init__(self, handler_node, end = ".txt", watch_dir=BASE_DIR, poll_interval=2):
+    def __init__(self, handler_node, end = ".txt", watch_dir=BASE_DIR, poll_interval=2, max_checks=None):
         super().__init__(handler_node, interval=poll_interval)
         self.end = end
         self.watch_dir = watch_dir
         self.already_seen = set()
+        self.max_checks = max_checks
 
     def start(self, pipeline: PipelineExecutor):
         pipeline.add_node(self.handler_node, True)
         p = Process(
             target=self.watch,
-            args=(self.handler_node, self.end, pipeline, self.watch_dir, self.interval)
+            args=(self.handler_node, self.end, pipeline, self.watch_dir, self.interval, self.max_checks)
         )
         p.start()
         return p
 
     @staticmethod
-    def watch(handler_node, end, pipeline, watch_dir, poll_interval):
+    def watch(handler_node, end, pipeline, watch_dir, poll_interval, max_checks=None):
         already_seen = set()
-        print(f"[RequestTrigger] Observando diretório: {watch_dir}")
+        pid = os.getpid()
+        print(f"[RequestTrigger | PID {pid}] Observando diretório: {watch_dir}")
+        
+        checks = 0
         while True:
+            if max_checks is not None and checks >= max_checks:
+                print(f"[RequestTrigger | PID {pid}] Encerrando após {checks} ciclos.")
+                break
+
             files = set(os.listdir(watch_dir))
             new_files = files - already_seen
             for fname in new_files:
                 if fname.endswith(end):
-                    print(f"[RequestTrigger] Novo arquivo detectado: {fname}")
+                    print(f"[RequestTrigger | PID {pid}] Novo arquivo detectado: {fname}")
                     already_seen.add(fname)
                     pipeline.enqueue_producer(handler_node, data=os.path.join(watch_dir, fname))
+
+            checks += 1
             time.sleep(poll_interval)
 
 

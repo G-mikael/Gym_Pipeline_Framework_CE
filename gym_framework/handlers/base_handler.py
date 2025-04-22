@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from multiprocessing import Pool, cpu_count
 import time
+import os
 from gym_framework.core.dataframe import Dataframe
 
 
@@ -23,6 +24,9 @@ class BaseHandler(ABC):
         Returns:
             Dados transformados.
         """
+        pass
+
+    def message(self):
         pass
 
 
@@ -85,12 +89,15 @@ class HandlerNode:
 
 
     def run(self, node_queue = None, pipeline_queue = None, queue = None):
-        print(f"[{self.name}] Iniciando...")
+        pid = os.getpid()
+        print(f"[{self.name} | PID {pid}] Iniciando...")
 
         if node_queue:
             data = node_queue.get()
         else:
             data = None
+
+        self.handler.message()
 
         context = PipelineContext(queue, self.output_nodes, pipeline_queue)
 

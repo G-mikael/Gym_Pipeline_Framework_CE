@@ -184,9 +184,11 @@ class RiskTransactionClassifierHandler(BaseHandler):
         df.add_column("suspeita", [int(p) for p in predicoes])
         return df
 
+    def message(self):
+        print("[RiskModelInferenceHandler] Classificando transações com modelo treinado...")
+
     def handle(self, df):
         #print(df.showfirstrows(10))
-        print("[RiskModelInferenceHandler] Classificando transações com modelo treinado...")
         return self.classificar(df)
 
 

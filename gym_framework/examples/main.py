@@ -19,6 +19,7 @@ if __name__ == "__main__":
     print("Iniciando pipeline...")
 
     paralelo = True
+    max_checks = 50
 
     external_simulator_process = Process(target=gerar_arquivos_txt_simulados, args=(MOCKS_DIR,5,10000))
     external_simulator_process.start()
@@ -44,7 +45,8 @@ if __name__ == "__main__":
                                   parallel=paralelo)
     risk_classifier_node = HandlerNode("RiskClassifierHandler", 
                                    RiskTransactionClassifierHandler(), 
-                                   dependencies=[new_transactions_produto_node])
+                                   dependencies=[new_transactions_produto_node],
+                                   parallel=paralelo)
     save_node_csv = HandlerNode("SaveToCSVHandler",
                             SaveToCSVHandler(),
                             dependencies=[risk_classifier_node])
@@ -59,19 +61,19 @@ if __name__ == "__main__":
     )
 
     # Triggers
-    trigger = TimerTrigger(trigger_transactions_produto_node, interval=3, max_runs=5)
-    trigger_process = trigger.start(pipeline)
+    timer_trigger = TimerTrigger(trigger_transactions_produto_node, interval=3, max_runs=5)
+    timer_trigger_process = timer_trigger.start(pipeline)
 
-    request_trigger_transactions_txt = RequestTrigger(new_transactions_produto_node, watch_dir=MOCKS_DIR)
+    request_trigger_transactions_txt = RequestTrigger(new_transactions_produto_node, watch_dir=MOCKS_DIR, max_checks=max_checks)
     request_trigger_transactions_txt_process = request_trigger_transactions_txt.start(pipeline)
 
-    request_trigger_score = RequestTrigger(score_produto_node, ".csv", watch_dir=MOCKS_DIR) 
+    request_trigger_score = RequestTrigger(score_produto_node, ".csv", watch_dir=MOCKS_DIR, max_checks=max_checks) 
     request_trigger_score_process = request_trigger_score.start(pipeline)
 
-    request_trigger_client = RequestTrigger(client_produto_node, ".db", watch_dir=MOCKS_DIR)
+    request_trigger_client = RequestTrigger(client_produto_node, ".db", watch_dir=MOCKS_DIR, max_checks=max_checks)
     request_trigger_client_process = request_trigger_client.start(pipeline)
 
-    request_trigger_transactions_db = RequestTrigger(transactions_produto_node, ".db", watch_dir=MOCKS_DIR)
+    request_trigger_transactions_db = RequestTrigger(transactions_produto_node, ".db", watch_dir=MOCKS_DIR, max_checks=max_checks)
     request_trigger_transactions_db_process = request_trigger_transactions_db.start(pipeline)
 
 
@@ -86,5 +88,12 @@ if __name__ == "__main__":
     print(f" Pipiline finalizou em {elapsed:.4f} segundos.")
 
     external_simulator_process.join()
+
+    # Espera os processos dos triggers terminarem
+    timer_trigger_process.join()
+    request_trigger_transactions_txt_process.join()
+    request_trigger_score_process.join()
+    request_trigger_client_process.join()
+    request_trigger_transactions_db_process.join()
 
     print("Pipeline finalizado.")

@@ -44,6 +44,11 @@ class PipelineExecutor:
         max_idle = 11  # segundos de espera antes de desistir
         
         while True:
+            for p in self.processes[:]:
+                if not p.is_alive():
+                    p.join()
+                    self.processes.remove(p)
+            
             try:
                 item = self.queue.get(timeout=1)  # espera por até 1s
                 idle_time = 0  # reset idle
