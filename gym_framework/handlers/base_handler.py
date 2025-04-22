@@ -105,3 +105,86 @@ class HandlerNode:
 
         elapsed = end_time - start_time
         print(f"[{self.name}] Finalizou em {elapsed:.4f} segundos.")
+
+class MultiHandlerNode:
+    def __init__(self, name, handler: BaseHandler, dependencies=None, parallel=False, chunks=4):
+        self.name = name
+        self.handler = handler
+        self.dependencies = dependencies or []
+        self.parallel = parallel
+        self.chunks = chunks
+
+        self.output_nodes = []
+
+        # Conecta dependências e inicializa armazenamento de inputs
+        self.input_data = {}
+        for dep in self.dependencies:
+            dep.add_dependent(self)
+
+    def add_dependent(self, node):
+        self.output_nodes.append((node.name, node))
+
+    def receive(self, from_name, data):
+        self.input_data[from_name] = data
+
+    def ready(self):
+        """Verifica se recebeu dados de todas as dependências."""
+        return all(dep.name in self.input_data for dep in self.dependencies)
+
+    def send(self, context: PipelineContext, data):
+        for name, _ in context.dependencies:
+            context.queue[name].put(data)
+            context.pipeline_queue.put(name)
+
+    def split_data(self, data):
+        if isinstance(data, Dataframe):
+            total = len(data.data)
+            chunk_size = max(1, total // self.chunks)
+            return [
+                Dataframe(data.data[i:i + chunk_size], data.columns)
+                for i in range(0, total, chunk_size)
+            ]
+        return [data]
+
+    def process_chunk(self, chunk):
+        return self.handler.handle(chunk)
+
+    def parallel_handle(self, data):
+        chunks = self.split_data(data)
+        with Pool(processes=min(cpu_count(), self.chunks)) as pool:
+            results = pool.map(self.process_chunk, chunks)
+
+        if isinstance(data, Dataframe):
+            combined_data = []
+            for df in results:
+                combined_data.extend(df.data)
+            return Dataframe(combined_data, data.columns)
+        else:
+            return results
+
+    def run(self, node_queues: dict, pipeline_queue, queue):
+        print(f"[{self.name}] Aguardando entradas de: {[d.name for d in self.dependencies]}")
+        
+        # Espera dados de todas as dependências
+        while not self.ready():
+            for dep in self.dependencies:
+                if dep.name not in self.input_data:
+                    data = node_queues[dep.name].get()
+                    self.receive(dep.name, data)
+
+        # Juntar os dados das entradas (pode ser customizado conforme o handler)
+        input_data = list(self.input_data.values())
+
+        context = PipelineContext(queue, self.output_nodes, pipeline_queue)
+
+        start_time = time.perf_counter()
+        if self.parallel:
+            result = self.parallel_handle(input_data)
+        else:
+            result = self.handler.handle(input_data)
+        end_time = time.perf_counter()
+
+        self.send(context, result)
+
+        elapsed = end_time - start_time
+        print(f"[{self.name}] Finalizou em {elapsed:.4f} segundos.")
