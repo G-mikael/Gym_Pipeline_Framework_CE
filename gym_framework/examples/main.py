@@ -4,6 +4,7 @@ from gym_framework.handlers.handler import *
 from gym_framework.handlers.producer import *
 from gym_framework.handlers.trigger import TimerTrigger, RequestTrigger
 from gym_framework.tests.mock.generate_data import gerar_arquivos_txt_simulados
+from gym_framework.core.train_riskClassifierModel import treinar_e_salvar_modelo
 from multiprocessing import Process
 from pathlib import Path
 
@@ -12,6 +13,9 @@ MOCKS_DIR = BASE_DIR / "mocks"
 
 
 if __name__ == "__main__":
+    # Treinamento antes do pipeline
+    print("🔁 Treinando o modelo de risco com dados rotulados...")
+    treinar_e_salvar_modelo("gym_framework/tests/mock/transacoes_rotuladas.txt")  
     print("Iniciando pipeline...")
 
     paralelo = True
@@ -38,9 +42,12 @@ if __name__ == "__main__":
                                   ClassifierHandler(),
                                   dependencies=[new_transactions_produto_node, trigger_transactions_produto_node],
                                   parallel=paralelo)
+    risk_classifier_node = HandlerNode("RiskClassifierHandler", 
+                                   RiskTransactionClassifierHandler(), 
+                                   dependencies=[new_transactions_produto_node])
     save_node = HandlerNode("SaveToFileHandler",
                             SaveToFileHandler(),
-                            dependencies=[classifier_node])
+                            dependencies=[classifier_node, risk_classifier_node])
     calculete_node = HandlerNode("CalculateAverageGainHandler",
                                  CalculateAverageGainHandler(),
                                  dependencies=[classifier_node])
@@ -48,11 +55,11 @@ if __name__ == "__main__":
     # Executor
     pipeline = PipelineExecutor(
         [],
-        [transformador_node, loader_node, classifier_node, save_node, calculete_node]
+        [transformador_node, loader_node, classifier_node, save_node, calculete_node, risk_classifier_node]
     )
 
     # Triggers
-    trigger = TimerTrigger(trigger_transactions_produto_node, interval=3, max_runs=20)
+    trigger = TimerTrigger(trigger_transactions_produto_node, interval=3, max_runs=5)
     trigger_process = trigger.start(pipeline)
 
     request_trigger_transactions_txt = RequestTrigger(new_transactions_produto_node, watch_dir=MOCKS_DIR)
