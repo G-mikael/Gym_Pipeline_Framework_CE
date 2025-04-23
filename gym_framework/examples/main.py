@@ -63,20 +63,8 @@ if __name__ == "__main__":
     transaction_type_count_node = HandlerNode("TransactionTypeCountHandler",
                                               TransactionTypeCountHandler(),
                                               dependencies=[classifier_node])    
-    save_to_db_node = HandlerNode("SaveToDatabaseHandler",
-                                  SaveToDatabaseHandler(),
-                                  dependencies=[classifier_node])
-    # Adiciona o nó de métrica para calcular o número de transações mais frequentes
-    calculate_most_transactions_node = HandlerNode("CalculateMostTransactionsHandler",
-                                             CalculateMostTransactionsHandler(),
-                                             dependencies=[transactions_produto_node])
     
-    # Adiciona o nó de métrica para contar o número de transações por tipo
-    transaction_type_count_node = HandlerNode("TransactionTypeCountHandler",
-                                              TransactionTypeCountHandler(),
-                                              dependencies=[classifier_node])  
-
-    # Adiciona o nó de métrica para calcular a porcentagem de transações suspeitas# Adiciona o nó de métrica para calcular a porcentagem de transações suspeitas
+    # Adiciona o nó de métrica para calcular a porcentagem de transações suspeitas
     risk_percentage_node = HandlerNode("RiskPercentageHandler",
                                         RiskPercentageHandler(),
                                         dependencies=[risk_classifier_node])
