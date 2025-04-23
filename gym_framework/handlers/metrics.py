@@ -1,5 +1,6 @@
 from gym_framework.handlers.base_handler import BaseHandler
 from gym_framework.core.dataframe import Dataframe
+from datetime import datetime
 
 
 # Mostra o indivíduo com mais numero de transações
@@ -75,3 +76,31 @@ class RiskPercentageHandler(BaseHandler):
         print(f"[RiskPercentageHandler] Porcentagem de transações suspeitas: {percentage:.2f}%")
         return percentage
 
+
+
+
+
+class CurrencyVolumeHandler(BaseHandler):
+    """
+    Classe para calcular o volume total transacionado por moeda.
+    """
+
+    def pre_message(self):
+        print("[CurrencyVolumeHandler] Calculando volume total por moeda...")
+
+    def handle(self, df):
+        # Agrupa as transações por tipo de moeda
+        grouped = df.group_by("moeda")
+
+        # Soma os valores de cada grupo
+        currency_totals = []
+        for moeda, grupo in grouped.items():
+            total = sum(float(row["valor"]) for row in grupo.data)
+            currency_totals.append({"moeda": moeda, "total": round(total, 2)})
+
+        return currency_totals
+
+    def pos_message(self, currency_totals):
+        for moeda in currency_totals:
+            print(f"[CurrencyVolumeHandler] Moeda: {moeda['moeda']} --- Total transacionado: {moeda['total']:.2f}")
+        return currency_totals

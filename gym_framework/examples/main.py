@@ -84,13 +84,17 @@ if __name__ == "__main__":
                                         RiskPercentageHandler(),
                                         dependencies=[risk_classifier_node])
   
+    # Adiciona o nó de métrica para calcular o volume total transacionado por moeda
+    currency_volume_node = HandlerNode("CurrencyVolumeHandler",
+                                        CurrencyVolumeHandler(),
+                                        dependencies=[risk_classifier_node])
 
     # Executor
     pipeline = PipelineExecutor(
         [],
         [transformador_node, loader_node, classifier_node, save_node_csv, calculete_node, 
          risk_classifier_node, save_to_db_node, calculate_most_transactions_node, transaction_type_count_node, 
-         risk_percentage_node]
+         risk_percentage_node, currency_volume_node]
 
     )
     
