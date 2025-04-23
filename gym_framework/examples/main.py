@@ -37,9 +37,6 @@ if __name__ == "__main__":
                                      NormalizerHandler(),
                                      dependencies=[client_produto_node],
                                      parallel=paralelo)
-    loader_node = HandlerNode("LoaderNode",
-                              LoaderHandler(),
-                              dependencies=[transformador_node])
     classifier_node = HandlerNode("ClassifierHandler",
                                   ClassifierHandler(),
                                   dependencies=[new_transactions_produto_node, trigger_transactions_produto_node],
@@ -92,7 +89,7 @@ if __name__ == "__main__":
     # Executor
     pipeline = PipelineExecutor(
         [],
-        [transformador_node, loader_node, classifier_node, save_node_csv, calculete_node, 
+        [transformador_node, classifier_node, save_node_csv, calculete_node, 
          risk_classifier_node, save_to_db_node, calculate_most_transactions_node, transaction_type_count_node, 
          risk_percentage_node, currency_volume_node]
 
@@ -124,7 +121,7 @@ if __name__ == "__main__":
     end_time = time.perf_counter()
     elapsed = end_time - start_time
 
-    print(f" Pipiline finalizou em {elapsed:.4f} segundos.")
+    print(f"Pipeline finalizou em {elapsed:.4f} segundos.")
 
     external_simulator_process.join()
 

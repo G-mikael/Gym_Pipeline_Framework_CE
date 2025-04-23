@@ -9,7 +9,6 @@ Este projeto implementa um framework de **processamento de dados escalável**, c
 ## ✅ Requisitos
 
 - Python >= 3.7
-- [faker](https://pypi.org/project/Faker/)
 
 Instale os requisitos com:
 
@@ -107,13 +106,13 @@ O resultado será um pipeline funcional que consome dados de arquivos e banco de
 gym_framework/
 ├── core/          # Núcleo do framework (pipeline, dataframe, etc.)
 ├── docs/          # Documentos (diagramas, ER, etc.)
-├── handlers/      # Handlers (processadores de dados)
+├── examples/      # Exemplo completo de uso do framework
+│   ├── main.py    # Arquivo principal que executa o pipeline
 ├── extractors/    # Módulos de extração de dados
+├── handlers/      # Handlers (processadores de dados)
 ├── loaders/       # Módulos de carregamento de dados   
-examples/
-├── main.py        # Exemplo completo de uso do framework
-mocks/
-├── ...            # Arquivos simulados utilizados durante os testes
+├── mocks/         # Arquivos simulados utilizados durante os testes
+setup.py           # Script de instalação do pacote
 ```
 
 ---
