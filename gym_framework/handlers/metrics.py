@@ -61,7 +61,7 @@ class RiskPercentageHandler(BaseHandler):
     """
     
     def handle(self, df):
-        print("[PercentageHandler] Calculando porcentagem de transações suspeitas...")
+        print("[RiskPercentageHandler] Calculando porcentagem de transações suspeitas...")
 
         # Conta o número total de transações
         total_transactions = len(df.data)
@@ -72,6 +72,6 @@ class RiskPercentageHandler(BaseHandler):
         # Calcula a porcentagem de transações suspeitas
         percentage = (suspicious_transactions / total_transactions) * 100 if total_transactions > 0 else 0
 
-        print(f"[PercentageHandler] Porcentagem de transações suspeitas: {percentage:.2f}%")
+        print(f"[RiskPercentageHandler] Porcentagem de transações suspeitas: {percentage:.2f}%")
         return percentage
 

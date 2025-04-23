@@ -23,7 +23,6 @@ def treinar_e_salvar_modelo(caminho_txt, caminho_modelo=MODELO_PATH):
     # Preprocessamento dos dados
     X_numerico = []
     moedas = []
-    print(df_rotulado.data[0])
     for row in df_rotulado.data:
         try:
             valor = float(row['valor'])
