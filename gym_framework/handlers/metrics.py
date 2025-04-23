@@ -27,7 +27,7 @@ class CalculateMostTransactionsHandler(BaseHandler):
         # Recupera os dados completos desse indivíduo (pega a primeira linha associada ao ID)
         top_individual = grouped[top_id].data[0]
 
-        print(f"[CalculateMostTransactionsHandler] Indivíduo com mais transações -> ClientID: {top_individual["cliente_id"]} --- Número de transações:{sorted_counted[0]["count"]}")
+        print(f"[CalculateMostTransactionsHandler] Indivíduo com mais transações -> ClientID: {top_individual['cliente_id']} --- Número de transações:{sorted_counted[0]['count']}")
         return top_individual
 
 
@@ -35,9 +35,10 @@ class TransactionTypeCountHandler(BaseHandler):
     """
     Classe para contar a quantidade de cada tipo de transação.
     """
+    def pre_message(self):
+        print("[TransactionTypeCountHandler] Contando a quantidade de cada tipo de transação...")
 
     def handle(self, df):
-        print("[TransactionTypeCountHandler] Contando a quantidade de cada tipo de transação...")
 
         # Agrupa pelas categorias de tipo de transação
         grouped = df.group_by("categoria")
@@ -45,6 +46,9 @@ class TransactionTypeCountHandler(BaseHandler):
         # Conta quantas transações existem por tipo
         type_counts = [{"categoria": tipo, "quantidade": len(grupo.data)} for tipo, grupo in grouped.items()]
 
+        return type_counts
+        
+    def pos_message(self, type_counts):
         # Exibe os resultados
         for tipo_count in type_counts:
             print(f"[TransactionTypeCountHandler] Tipo: {tipo_count['categoria']} --- Quantidade: {tipo_count['quantidade']}")

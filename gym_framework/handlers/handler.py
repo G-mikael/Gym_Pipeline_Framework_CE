@@ -29,7 +29,7 @@ class PipelineContext:
 class NormalizerHandler(BaseHandler):
     def __init__(self, num_processes=None):
         self.num_processes = num_processes or multiprocessing.cpu_count()
-        print(f"Using {self.num_processes} processes for normalization.")
+        print(f"Using {self.num_processes} processes.")
 
     def normalize_text(self, text):
         text = unicodedata.normalize('NFD', text)
@@ -184,6 +184,9 @@ class RiskTransactionClassifierHandler(BaseHandler):
         predicoes = self.modelo.predict(X)
         df.add_column("suspeita", [int(p) for p in predicoes])
         return df
+
+    def message(self):
+        print("[RiskModelInferenceHandler] Classificando transações com modelo treinado...")
 
     def handle(self, df):
         #print(df.showfirstrows(10))

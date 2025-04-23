@@ -174,7 +174,8 @@ def gerar_arquivos_txt_simulados(output_dir="data/incoming", max_files=5, transa
         save_transactions_to_txt(transactions, filepath, False)
         created_files.append(filepath)
 
-        print(f"[Simulador externo] Arquivo criado: {filename}")
+        pid = os.getpid()
+        print(f"[Simulador externo | PID {pid}] Arquivo criado: {filename}")
         time.sleep(random.randint(*delay_range))
 
     # Apagar arquivos após tempo (opcional)
