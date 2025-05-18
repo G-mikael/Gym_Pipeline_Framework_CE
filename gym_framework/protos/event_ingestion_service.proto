@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package gym_framework_rpc;
+
+// Mensagem para dados de Cliente
+// Baseado em generate_clients()
+message ClientData {
+    int64 id = 1;                   // "id": i + id_start + 1
+    string nome = 2;                // "nome": fake.name()
+    string cpf = 3;                 // "cpf": fake.cpf()
+    string data_nascimento = 4;     // "data_nascimento": birth_date (formato "YYYY-MM-DD")
+    string endereco = 5;            // "endereco": address
+}
+
+// Mensagem para dados de Transação
+// Baseado em generate_transactions()
+message TransactionData {
+    int64 id = 1;                   // "id": id_start + i + 1
+    int64 cliente_id = 2;           // "cliente_id": random.randint(0, client_count - 1)
+    string data = 3;                  // "data": (datetime.datetime.now() - ...).strftime("%Y-%m-%d")
+    double valor = 4;                 // "valor": round(random.uniform(10, 5000), 2)
+    string moeda = 5;                 // "moeda": random.choice(MOEDAS)
+    optional string categoria = 6;    // "categoria": random.choice(TRANSACOES) (opcional)
+}
+
+// Mensagem para dados de Score
+// Baseado em save_scores_to_csv()
+message ScoreData {
+    string cpf = 1;                   // "cpf": client["cpf"] (usado para vincular)
+    int32 score = 2;                  // "score": random.randint(300, 900)
+    double renda_mensal = 3;          // "renda_mensal": round(random.uniform(1500, 20000), 2)
+    double limite_credito = 4;        // "limite_credito": round(renda * random.uniform(0.5, 2.0), 2)
+    string data_ultima_atualizacao = 5;// "data_ultima_atualizacao": ...strftime("%Y-%m-%d")
+}
+
+// Resposta padrão para as chamadas de ingestão
+message IngestionResponse {
+    bool success = 1;
+    string message = 2;
+    string event_id = 3; // ID para rastreamento no teste de carga
+}
+
+// Serviço de ingestão de eventos
+service EventIngestionService {
+    rpc IngestClient(ClientData) returns (IngestionResponse);
+    rpc IngestTransaction(TransactionData) returns (IngestionResponse);
+    rpc IngestScore(ScoreData) returns (IngestionResponse);
+}
