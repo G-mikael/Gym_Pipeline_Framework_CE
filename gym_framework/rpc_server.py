@@ -1,68 +1,117 @@
 import grpc
 from concurrent import futures
+from multiprocessing import Process
+from gym_framework.core.pipeline import PipelineExecutor
+from gym_framework.handlers.base_handler import HandlerNode
+from gym_framework.handlers.handler import *
+from gym_framework.handlers.metrics import *
+from gym_framework.handlers.producer import *
+from gym_framework.core.train_riskClassifierModel import treinar_e_salvar_modelo
+import threading
+from pathlib import Path
 import time
 
-from gym_framework import event_ingestion_service_pb2 as pb2
-from gym_framework import event_ingestion_service_pb2_grpc as pb2_grpc
+from gym_framework import event_ingestion_service_pb2
+from gym_framework import event_ingestion_service_pb2_grpc
 
 
-class GRPCEventIngestionServicer(pb2_grpc.EventIngestionServiceServicer):
-    def __init__(self, pipeline_executor, handler_mapping):
-        self.pipeline_executor = pipeline_executor
-        self.handler_mapping = handler_mapping
+class EventIngestionService(event_ingestion_service_pb2_grpc.EventIngestionServiceServicer):
+    def __init__(self):
+        self.clients_buffer = []
+        self.transactions_buffer = []
+        self.scores_buffer = []
+        self.lock = threading.Lock()
+        self.pipeline = None
+
+    def set_pipeline(self, pipeline):
+        self.pipeline = pipeline
 
     def IngestClient(self, request, context):
-        data = {
+        client_data = {
             'id': request.id,
             'nome': request.nome,
             'cpf': request.cpf,
             'data_nascimento': request.data_nascimento,
             'endereco': request.endereco
         }
-        event_id = request.cpf  # Pode ser ID também
-        self.pipeline_executor.enqueue_producer(self.handler_mapping['client'], data)
-        return pb2.IngestionResponse(success=True, message="Cliente processado", event_id=event_id)
+        with self.lock:
+            self.clients_buffer.append(client_data)
+        return event_ingestion_service_pb2.IngestionResponse(success=True, message="Client ingested")
 
     def IngestTransaction(self, request, context):
-        data = {
+        transaction_data = {
             'id': request.id,
             'cliente_id': request.cliente_id,
             'data': request.data,
             'valor': request.valor,
             'moeda': request.moeda,
+            'categoria': request.categoria if request.HasField('categoria') else None
         }
-        if request.HasField("categoria"):
-            data['categoria'] = request.categoria
-
-        event_id = str(request.id)
-        self.pipeline_executor.enqueue_producer(self.handler_mapping['transaction'], data)
-        return pb2.IngestionResponse(success=True, message="Transação processada", event_id=event_id)
+        with self.lock:
+            self.transactions_buffer.append(transaction_data)
+        return event_ingestion_service_pb2.IngestionResponse(success=True, message="Transaction ingested")
 
     def IngestScore(self, request, context):
-        data = {
+        score_data = {
             'cpf': request.cpf,
             'score': request.score,
             'renda_mensal': request.renda_mensal,
             'limite_credito': request.limite_credito,
             'data_ultima_atualizacao': request.data_ultima_atualizacao
         }
-        event_id = request.cpf
-        self.pipeline_executor.enqueue_producer(self.handler_mapping['score'], data)
-        return pb2.IngestionResponse(success=True, message="Score processado", event_id=event_id)
+        with self.lock:
+            self.scores_buffer.append(score_data)
+        return event_ingestion_service_pb2.IngestionResponse(success=True, message="Score ingested")
 
-
-def serve(pipeline_executor, handler_mapping, host='0.0.0.0', port=50051):
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    pb2_grpc.add_EventIngestionServiceServicer_to_server(
-        GRPCEventIngestionServicer(pipeline_executor, handler_mapping),
-        server
-    )
-    server.add_insecure_port(f'{host}:{port}')
-    server.start()
-    print(f"[RPC Server] Servidor gRPC rodando em {host}:{port}")
-    try:
+    def process_buffers(self):
         while True:
-            time.sleep(86400)
-    except KeyboardInterrupt:
-        print("[RPC Server] Encerrando servidor gRPC...")
-        server.stop(0)
+            if self.pipeline:
+                with self.lock:
+                    print(f"""
+                            Buffer Status:
+                            Clients: {len(self.clients_buffer)} items
+                            Transactions: {len(self.transactions_buffer)} items
+                            Scores: {len(self.scores_buffer)} items
+                            """)
+                    
+                    # Process clients
+                    if self.clients_buffer:
+                        from gym_framework.handlers.handler import ClientsDBProducerHandler
+                        producer = ClientsDBProducerHandler()
+                        producer.data = self.clients_buffer.copy()
+                        self.pipeline.add_node(producer)
+                        self.clients_buffer.clear()
+                    
+
+                    # Process transactions
+                    if self.transactions_buffer:
+                        from gym_framework.handlers.handler import TransactionsDBProducerHandler
+                        producer = TransactionsDBProducerHandler()
+                        producer.data = self.transactions_buffer.copy()
+                        self.pipeline.add_node(producer)
+                        self.transactions_buffer.clear()
+
+                    # Process scores
+                    if self.scores_buffer:
+                        from gym_framework.handlers.handler import ScoreCSVProducerHandler
+                        producer = ScoreCSVProducerHandler()
+                        producer.data = self.scores_buffer.copy()
+                        self.pipeline.add_node(producer)
+                        self.scores_buffer.clear()
+
+            time.sleep(1)  # Check buffers
+
+def serve(pipeline):
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    service = EventIngestionService()
+    service.set_pipeline(pipeline)
+    event_ingestion_service_pb2_grpc.add_EventIngestionServiceServicer_to_server(service, server)
+    server.add_insecure_port('[::]:50051')
+    
+    # Start buffer processing thread
+    processing_thread = threading.Thread(target=service.process_buffers, daemon=True)
+    processing_thread.start()
+    
+    server.start()
+    print("Servidor RPC iniciado na porta 50051")
+    return server

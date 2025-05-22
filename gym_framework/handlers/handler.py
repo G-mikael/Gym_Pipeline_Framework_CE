@@ -220,3 +220,14 @@ class SaveToDatabaseHandler(BaseHandler):
         conn.close()
         print(f"Tabela '{self.table_name}' salva no banco '{self.db_path}' com sucesso.")
         return True
+
+class ClientsDBProducerHandler(BaseHandler):
+    def __init__(self):
+        super().__init__()
+        self.data = []  # Dados serão injetados pelo RPC
+
+    def execute(self):
+        if not self.data:
+            return
+        # Processamento original (adaptado para lista de dicionários)
+        self._output = [transformar_cliente(c) for c in self.data]
