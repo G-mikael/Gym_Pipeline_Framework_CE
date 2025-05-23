@@ -22,84 +22,74 @@ class EventIngestionService(event_ingestion_service_pb2_grpc.EventIngestionServi
         self.scores_buffer = []
         self.lock = threading.Lock()
         self.pipeline = None
+        self._running = False  # Controle de estado
+        self._pipeline_active = True  # Sincronização com pipeline
+        
+        self.Handlers = {
+            'clients': ClientsDBProducerHandler,
+            'transactions': TransactionsDBProducerHandler,
+            'scores': ScoreCSVProducerHandler
+        }
 
     def set_pipeline(self, pipeline):
         self.pipeline = pipeline
+        self._pipeline_active = True
 
-    def IngestClient(self, request, context):
-        client_data = {
-            'id': request.id,
-            'nome': request.nome,
-            'cpf': request.cpf,
-            'data_nascimento': request.data_nascimento,
-            'endereco': request.endereco
-        }
-        with self.lock:
-            self.clients_buffer.append(client_data)
-        return event_ingestion_service_pb2.IngestionResponse(success=True, message="Client ingested")
+    def pipeline_stopped(self):
+        """Método para ser chamado quando o pipeline para"""
+        self._pipeline_active = False
 
-    def IngestTransaction(self, request, context):
-        transaction_data = {
-            'id': request.id,
-            'cliente_id': request.cliente_id,
-            'data': request.data,
-            'valor': request.valor,
-            'moeda': request.moeda,
-            'categoria': request.categoria if request.HasField('categoria') else None
-        }
-        with self.lock:
-            self.transactions_buffer.append(transaction_data)
-        return event_ingestion_service_pb2.IngestionResponse(success=True, message="Transaction ingested")
-
-    def IngestScore(self, request, context):
-        score_data = {
-            'cpf': request.cpf,
-            'score': request.score,
-            'renda_mensal': request.renda_mensal,
-            'limite_credito': request.limite_credito,
-            'data_ultima_atualizacao': request.data_ultima_atualizacao
-        }
-        with self.lock:
-            self.scores_buffer.append(score_data)
-        return event_ingestion_service_pb2.IngestionResponse(success=True, message="Score ingested")
+    def stop(self):
+        """Para o processamento dos buffers"""
+        self._running = False
 
     def process_buffers(self):
-        while True:
-            if self.pipeline:
-                with self.lock:
-                    print(f"""
-                            Buffer Status:
-                            Clients: {len(self.clients_buffer)} items
-                            Transactions: {len(self.transactions_buffer)} items
-                            Scores: {len(self.scores_buffer)} items
-                            """)
-                    
-                    # Process clients
-                    if self.clients_buffer:
-                        from gym_framework.handlers.handler import ClientsDBProducerHandler
-                        producer = ClientsDBProducerHandler()
-                        producer.data = self.clients_buffer.copy()
-                        self.pipeline.add_node(producer)
-                        self.clients_buffer.clear()
-                    
+        """Processa buffers apenas quando o pipeline está ativo"""
+        print("Buffer processing started")
+        self._running = True
+        while self._running and self._pipeline_active:
+            if not self.pipeline:
+                time.sleep(1)
+                continue
 
-                    # Process transactions
-                    if self.transactions_buffer:
-                        from gym_framework.handlers.handler import TransactionsDBProducerHandler
-                        producer = TransactionsDBProducerHandler()
-                        producer.data = self.transactions_buffer.copy()
-                        self.pipeline.add_node(producer)
-                        self.transactions_buffer.clear()
+            # Verifica buffers dentro do lock
+            with self.lock:
+                if not any([self.clients_buffer, self.transactions_buffer, self.scores_buffer]):
+                    time.sleep(1)
+                    continue
 
-                    # Process scores
-                    if self.scores_buffer:
-                        from gym_framework.handlers.handler import ScoreCSVProducerHandler
-                        producer = ScoreCSVProducerHandler()
-                        producer.data = self.scores_buffer.copy()
-                        self.pipeline.add_node(producer)
-                        self.scores_buffer.clear()
+                # Prepara dados para processamento
+                buffers = {
+                    'clients': self.clients_buffer.copy(),
+                    'transactions': self.transactions_buffer.copy(),
+                    'scores': self.scores_buffer.copy()
+                }
+                self.clients_buffer.clear()
+                self.transactions_buffer.clear()
+                self.scores_buffer.clear()
 
-            time.sleep(1)  # Check buffers
+            # Processa fora do lock
+            for buffer_type, data in buffers.items():
+                if data:
+                    try:
+                        producer = self.Handlers[buffer_type]()
+                        producer.data = data
+                        self.pipeline.add_node(producer)
+                        print(f"{len(data)} {buffer_type} adicionados ao pipeline")
+                    except Exception as e:
+                        print(f"Erro ao processar {buffer_type}: {e}")
+                        # Recoloca os dados no buffer se houver erro
+                        with self.lock:
+                            if buffer_type == 'clients':
+                                self.clients_buffer.extend(data)
+                            elif buffer_type == 'transactions':
+                                self.transactions_buffer.extend(data)
+                            elif buffer_type == 'scores':
+                                self.scores_buffer.extend(data)
+
+            time.sleep(0.5)
+
+        print("Buffer processing stopped")
 
 def serve(pipeline):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
@@ -108,10 +98,9 @@ def serve(pipeline):
     event_ingestion_service_pb2_grpc.add_EventIngestionServiceServicer_to_server(service, server)
     server.add_insecure_port('[::]:50051')
     
-    # Start buffer processing thread
-    processing_thread = threading.Thread(target=service.process_buffers, daemon=True)
+    processing_thread = threading.Thread(target=service.process_buffers)
     processing_thread.start()
     
     server.start()
     print("Servidor RPC iniciado na porta 50051")
-    return server
+    return service, server, processing_thread

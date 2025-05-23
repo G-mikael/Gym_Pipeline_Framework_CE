@@ -17,7 +17,15 @@ import time
 import pickle
 import sqlite3
 
-
+def transformar_cliente(cliente):
+    """Transforma o formato do cliente para o padrão do pipeline"""
+    return {
+        'id': cliente['id'],
+        'nome': cliente['nome'],
+        'documento': cliente['cpf'],
+        'endereco': cliente['endereco'],
+        'data_nascimento': cliente['data_nascimento']
+    }
 
 class PipelineContext:
     def __init__(self, queue, dependencies=None, pipeline_queue=None):
@@ -231,3 +239,37 @@ class ClientsDBProducerHandler(BaseHandler):
             return
         # Processamento original (adaptado para lista de dicionários)
         self._output = [transformar_cliente(c) for c in self.data]
+        
+class TransactionsDBProducerHandler(BaseHandler):
+    def __init__(self):
+        super().__init__()
+        self.data = []  # Dados injetados pelo RPC
+
+    def execute(self):
+        if not self.data:
+            return
+            
+        self._output = [{
+            'id': tx['id'],
+            'cliente_id': tx['cliente_id'],
+            'data': tx['data'],
+            'valor': float(tx['valor']),
+            'moeda': tx['moeda'],
+            'categoria': tx.get('categoria')
+        } for tx in self.data]
+
+class ScoreCSVProducerHandler(BaseHandler):
+    def __init__(self):
+        super().__init__()
+        self.data = []
+
+    def execute(self):
+        if not self.data:
+            return
+            
+        self._output = [{
+            'cpf': score['cpf'],
+            'score': int(score['score']),
+            'renda': float(score['renda_mensal']),
+            'limite_credito': float(score['limite_credito'])
+        } for score in self.data]

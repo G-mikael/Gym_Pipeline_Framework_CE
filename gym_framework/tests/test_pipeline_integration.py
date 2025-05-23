@@ -45,19 +45,22 @@ if __name__ == "__main__":
     # 1. Configura o pipeline
     pipeline = setup_pipeline()
     
-    # 2. Inicia o servidor RPC em uma thread separada
+    # 2. Inicia servidor RPC
     server = serve(pipeline)
     
-    # 3. Inicia o pipeline
-    pipeline_thread = threading.Thread(target=pipeline.start)
+    # 3. Função modificada para execução contínua
+    def pipeline_loop():
+        while True:
+            pipeline.start(mode="rpc")
+            time.sleep(0.1)
+    
+    pipeline_thread = threading.Thread(target=pipeline_loop)
+    pipeline_thread.daemon = True  # Permite desligamento com o programa
     pipeline_thread.start()
     
     try:
-        # Mantém o programa rodando
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\nDesligando o servidor...")
+        print("\nDesligando...")
         server.stop(0)
-        pipeline_thread.join()
-        print("Servidor desligado.")

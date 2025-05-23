@@ -12,23 +12,51 @@ class PipelineExecutor:
         self.nodes = nodes
         self.node_queue = {node.name: Queue() for node in nodes}
         self.node_list = {node.name: node for node in nodes}
+        self.rpc_queue = Queue()
         self.queue = Queue()
         self.processes = []
 
-    def start(self):
-        for productor in self.productores:
-            for i in range(1):
+    def start(self, mode='filesystem'):
+        # Inicia producers de arquivo se no modo filesystem
+        if mode == 'filesystem':
+            for productor in self.productores:
                 p = Process(target=productor.run, args=(None, self.queue, self.node_queue))
                 self.processes.append(p)
                 p.start()
         
-        self.run()
+        # Loop principal
+        if mode == 'rpc':
+            while True:
+                try:
+                    while not self.rpc_queue.empty():
+                        new_node = self.rpc_queue.get_nowait()
+                        self.nodes.append(new_node)
+                        print(f"Nó RPC recebido: {new_node.name}")
+                except queue.Empty:
+                    pass
+            
+                time.sleep(0.1)
+
 
     def enqueue_producer(self, handler_node: HandlerNode, data = None):
         name = handler_node.name
         self.queue.put(name)
         if data: self.node_queue[name].put(data)
+    
+    def _process_new_nodes(self):
+        try:
+            print(f"Tentando ler da node_queue (tamanho: {self.node_queue.qsize()})")  # DEBUG
+            new_node = self.node_queue.get(timeout=5)  # Timeout de 5 segundos
+            print(f"Nó recebido: {type(new_node)}")  # DEBUG
+            self.nodes.append(new_node)
+        except queue.Empty:
+            print("node_queue vazia")  # DEBUG
+            time.sleep(1)
 
+    def add_rpc_node(self, node): 
+        """Adiciona nós recebidos via RPC"""
+        self.rpc_queue.put(node)
+    
     def add_node(self, node, queue = False):
         """Adiciono um nó a lista de nós do pipeline
 
