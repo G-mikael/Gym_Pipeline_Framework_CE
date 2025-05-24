@@ -3,7 +3,7 @@ from concurrent import futures
 import threading
 import time
 import traceback
-from gym_framework.core.pipeline import PipelineExecutor_rpc
+from gym_framework.core.pipeline import PipelineExecutor_rpc, PipelineExecutor
 from gym_framework import event_ingestion_service_pb2
 from gym_framework import event_ingestion_service_pb2_grpc
 from gym_framework.handlers.base_handler import HandlerNode

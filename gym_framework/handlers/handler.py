@@ -254,6 +254,7 @@ class rpc_ClientsDBProducerHandler(BaseHandler):
         self.df = Dataframe(data)
         self._executed = False
         self.data_ready.set()
+        logger.info(f"Producer {self.__class__.__name__} entregando {len(data)} registros")
 
     def shutdown(self):
         """Para a execução"""
@@ -276,12 +277,21 @@ class rpc_ClientsDBProducerHandler(BaseHandler):
     def handle(self, _=None):
         """Implementação obrigatória do BaseHandler - entrega dados para o pipeline"""
         if not self._output:
-            return None
+            return None  # Ou Dataframe vazio: `return Dataframe([], [])`
+        
+        with threading.Lock():
+            if not self._output:
+                return None
             
-        with threading.Lock():  # Garante thread-safe
-            processed = self._output.copy()
-            self._output.clear()
-            return processed
+        # Pega os dados processados
+        processed_data = self._output.copy()
+        self._output.clear()
+        
+        # Extrai as colunas do primeiro registro (se existir)
+        columns = list(processed_data[0].keys()) if processed_data else []
+        
+        # Retorna um Dataframe no formato esperado
+        return Dataframe(data=processed_data, columns=columns)
 
 class rpc_TransactionsDBProducerHandler(BaseHandler):
     def __init__(self):
@@ -309,6 +319,7 @@ class rpc_TransactionsDBProducerHandler(BaseHandler):
         self.df = Dataframe(data)
         self._executed = False
         self.data_ready.set()
+        logger.info(f"Producer {self.__class__.__name__} entregando {len(data)} registros")
 
     def shutdown(self):
         self.shutdown_flag.set()
@@ -328,13 +339,21 @@ class rpc_TransactionsDBProducerHandler(BaseHandler):
 
     def handle(self, _=None):
         if not self._output:
-            return None
-            
+            return None  # Ou Dataframe vazio: `return Dataframe([], [])`
+        
         with threading.Lock():
-            processed = self._output.copy()
-            self._output.clear()
-            logger.info(f"Producer {self.__class__.__name__} entregando {len(data)} registros")
-            return processed
+            if not self._output:
+                return None
+            
+        # Pega os dados processados
+        processed_data = self._output.copy()
+        self._output.clear()
+        
+        # Extrai as colunas do primeiro registro (se existir)
+        columns = list(processed_data[0].keys()) if processed_data else []
+        
+        # Retorna um Dataframe no formato esperado
+        return Dataframe(data=processed_data, columns=columns)
 
 class rpc_ScoreCSVProducerHandler(BaseHandler):
     def __init__(self):
@@ -362,6 +381,7 @@ class rpc_ScoreCSVProducerHandler(BaseHandler):
         self.df = Dataframe(data)
         self._executed = False
         self.data_ready.set()
+        logger.info(f"Producer {self.__class__.__name__} entregando {len(data)} registros")
 
     def shutdown(self):
         self.shutdown_flag.set()
@@ -379,9 +399,19 @@ class rpc_ScoreCSVProducerHandler(BaseHandler):
     
     def handle(self, _=None):
         if not self._output:
-            return None
-            
+            return None  # Ou Dataframe vazio: `return Dataframe([], [])`
+        
         with threading.Lock():
-            processed = self._output.copy()
-            self._output.clear()
-            return processed
+            if not self._output:
+                return None
+            
+        # Pega os dados processados
+        processed_data = self._output.copy()
+        self._output.clear()
+        
+        # Extrai as colunas do primeiro registro (se existir)
+        columns = list(processed_data[0].keys()) if processed_data else []
+        
+        print(processed_data)
+        # Retorna um Dataframe no formato esperado
+        return Dataframe(data=processed_data, columns=columns)

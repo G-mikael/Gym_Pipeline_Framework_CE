@@ -4,7 +4,8 @@ from gym_framework.handlers.handler import *
 from gym_framework.handlers.producer import *
 from multiprocessing import Queue
 import threading
-import queue  
+import queue
+import traceback
 
 
 class PipelineExecutor:
@@ -165,28 +166,37 @@ class PipelineExecutor_rpc:
             print(f"Producer error: {e}")
 
     def process_nodes(self):
-        """Processa todos os nós do pipeline na ordem correta"""
+        """Versão modificada para lidar com producers"""
         while self.running:
-            # Processa cada nó na ordem determinada
-            for node in self.node_order:
-                try:
-                    # Pega dados da fila de entrada ou da fila do nó anterior
-                    input_queue = self.input_queue if node == self.node_order[0] else self.output_queues[node.dependencies[0]]
-                    input_data = input_queue.get_nowait()
-                    
-                    # Processa os dados
-                    output_data = node.handler.handle(input_data)
-                    
-                    # Coloca na fila de saída para os próximos nós
-                    self.output_queues[node.name].put(output_data)
-                    
-                except queue.Empty:
-                    continue
-                except Exception as e:
-                    #print(f"Error in node {node.name}: {e}")
-                    pass
+            try:
+                # 1. Coleta dados de todos os producers
+                clients_data = self.nodes["ClientsDBProducer"].handler.handle()
+                transactions_data = self.nodes["TransactionsDBProducer"].handler.handle()
+                scores_data = self.nodes["ScoreCSVProducer"].handler.handle()
 
-            time.sleep(0.1)
+                # 2. Só processa se tiver dados de todos os tipos
+                if clients_data and transactions_data and scores_data:
+                    # 3. Combina os dados (exemplo simplificado)
+                    combined_data = {
+                        "clients": clients_data,
+                        "transactions": transactions_data,
+                        "scores": scores_data
+                    }
+                    
+                    # 4. Processa através do pipeline
+                    current_data = combined_data
+                    for node in self.node_order:
+                        if node.name in ["ClientsDBProducer", "TransactionsDBProducer", "ScoreCSVProducer"]:
+                            continue  # Pula os producers
+                            
+                        current_data = node.handler.handle(current_data)
+                        
+                    print(current_data) # Exibe o resultado final
+                        
+            except Exception as e:
+                print(f"Erro no pipeline: {str(e)}")
+                traceback.print_exc()
+                time.sleep(1)
 
     def run(self):
         """Executa o pipeline completo"""
