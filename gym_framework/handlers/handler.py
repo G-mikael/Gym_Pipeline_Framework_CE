@@ -13,19 +13,14 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn.model_selection import train_test_split
+import threading
 import time
 import pickle
 import sqlite3
 
-def transformar_cliente(cliente):
-    """Transforma o formato do cliente para o padrão do pipeline"""
-    return {
-        'id': cliente['id'],
-        'nome': cliente['nome'],
-        'documento': cliente['cpf'],
-        'endereco': cliente['endereco'],
-        'data_nascimento': cliente['data_nascimento']
-    }
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class PipelineContext:
     def __init__(self, queue, dependencies=None, pipeline_queue=None):
@@ -229,26 +224,99 @@ class SaveToDatabaseHandler(BaseHandler):
         print(f"Tabela '{self.table_name}' salva no banco '{self.db_path}' com sucesso.")
         return True
 
-class ClientsDBProducerHandler(BaseHandler):
+class rpc_ClientsDBProducerHandler(BaseHandler):
     def __init__(self):
         super().__init__()
-        self.data = []  # Dados serão injetados pelo RPC
+        self.df = None
+        self._executed = False
+        self.data_ready = threading.Event()
+        self.shutdown_flag = threading.Event()
+        self._output = []  # Adicionado para armazenar a saída
+        self._start_monitor()
+
+    def _start_monitor(self):
+        def monitor():
+            while not self.shutdown_flag.is_set():
+                self.data_ready.wait(timeout=0.5)
+                
+                if self.shutdown_flag.is_set():
+                    break
+                
+                if self.df and self.df.shape()[0] > 0 and not self._executed:
+                    self.execute()
+                    self._executed = True
+                    self.data_ready.clear()
+
+        threading.Thread(target=monitor, daemon=True).start()
+
+    def inject_data(self, data):
+        """Recebe dados dos ingesters"""
+        self.df = Dataframe(data)
+        self._executed = False
+        self.data_ready.set()
+
+    def shutdown(self):
+        """Para a execução"""
+        self.shutdown_flag.set()
+        self.data_ready.set()
 
     def execute(self):
-        if not self.data:
-            return
-        # Processamento original (adaptado para lista de dicionários)
-        self._output = [transformar_cliente(c) for c in self.data]
-        
-class TransactionsDBProducerHandler(BaseHandler):
-    def __init__(self):
-        super().__init__()
-        self.data = []  # Dados injetados pelo RPC
-
-    def execute(self):
-        if not self.data:
+        """Processa os dados recebidos"""
+        if not self.df or self.df.shape()[0] == 0:
             return
             
+        self._output = [{
+            'id': c['id'],
+            'nome': c['nome'],
+            'documento': c['cpf'],
+            'endereco': c['endereco'],
+            'data_nascimento': c['data_nascimento']
+        } for c in self.df.data]
+
+    def handle(self, _=None):
+        """Implementação obrigatória do BaseHandler - entrega dados para o pipeline"""
+        if not self._output:
+            return None
+            
+        with threading.Lock():  # Garante thread-safe
+            processed = self._output.copy()
+            self._output.clear()
+            return processed
+
+class rpc_TransactionsDBProducerHandler(BaseHandler):
+    def __init__(self):
+        super().__init__()
+        self.df = None
+        self._executed = False
+        self.data_ready = threading.Event()
+        self.shutdown_flag = threading.Event()
+        self._start_monitor()
+        self._output = []  # Adicionado para armazenar a saída
+
+    def _start_monitor(self):
+        def monitor():
+            while not self.shutdown_flag.is_set():
+                self.data_ready.wait(timeout=0.5)
+                if self.shutdown_flag.is_set():
+                    break
+                if self.df and self.df.shape()[0] > 0 and not self._executed:
+                    self.execute()
+                    self._executed = True
+                    self.data_ready.clear()
+        threading.Thread(target=monitor, daemon=True).start()
+
+    def inject_data(self, data):
+        self.df = Dataframe(data)
+        self._executed = False
+        self.data_ready.set()
+
+    def shutdown(self):
+        self.shutdown_flag.set()
+        self.data_ready.set()
+
+    def execute(self):
+        if not self.df or self.df.shape()[0] == 0:
+            return
         self._output = [{
             'id': tx['id'],
             'cliente_id': tx['cliente_id'],
@@ -256,20 +324,64 @@ class TransactionsDBProducerHandler(BaseHandler):
             'valor': float(tx['valor']),
             'moeda': tx['moeda'],
             'categoria': tx.get('categoria')
-        } for tx in self.data]
+        } for tx in self.df.data]
 
-class ScoreCSVProducerHandler(BaseHandler):
+    def handle(self, _=None):
+        if not self._output:
+            return None
+            
+        with threading.Lock():
+            processed = self._output.copy()
+            self._output.clear()
+            logger.info(f"Producer {self.__class__.__name__} entregando {len(data)} registros")
+            return processed
+
+class rpc_ScoreCSVProducerHandler(BaseHandler):
     def __init__(self):
         super().__init__()
-        self.data = []
+        self.df = None
+        self._executed = False
+        self.data_ready = threading.Event()
+        self.shutdown_flag = threading.Event()
+        self._output = []  # Adicionado para armazenar a saída
+        self._start_monitor()
+
+    def _start_monitor(self):
+        def monitor():
+            while not self.shutdown_flag.is_set():
+                self.data_ready.wait(timeout=0.5)
+                if self.shutdown_flag.is_set():
+                    break
+                if self.df and self.df.shape()[0] > 0 and not self._executed:
+                    self.execute()
+                    self._executed = True
+                    self.data_ready.clear()
+        threading.Thread(target=monitor, daemon=True).start()
+
+    def inject_data(self, data):
+        self.df = Dataframe(data)
+        self._executed = False
+        self.data_ready.set()
+
+    def shutdown(self):
+        self.shutdown_flag.set()
+        self.data_ready.set()
 
     def execute(self):
-        if not self.data:
+        if not self.df or self.df.shape()[0] == 0:
             return
-            
         self._output = [{
             'cpf': score['cpf'],
             'score': int(score['score']),
             'renda': float(score['renda_mensal']),
             'limite_credito': float(score['limite_credito'])
-        } for score in self.data]
+        } for score in self.df.data]
+    
+    def handle(self, _=None):
+        if not self._output:
+            return None
+            
+        with threading.Lock():
+            processed = self._output.copy()
+            self._output.clear()
+            return processed

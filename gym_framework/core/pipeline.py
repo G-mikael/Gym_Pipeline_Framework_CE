@@ -3,6 +3,7 @@ from gym_framework.handlers.base_handler import HandlerNode
 from gym_framework.handlers.handler import *
 from gym_framework.handlers.producer import *
 from multiprocessing import Queue
+import threading
 import queue  
 
 
@@ -53,6 +54,13 @@ class PipelineExecutor:
             print("node_queue vazia")  # DEBUG
             time.sleep(1)
 
+    def get_node(self, node_name):
+        """Retorna o nó com o nome especificado ou None se não encontrado"""
+        for node in self.nodes:
+            if node.name == node_name:
+                return node
+        return None
+    
     def add_rpc_node(self, node): 
         """Adiciona nós recebidos via RPC"""
         self.rpc_queue.put(node)
@@ -97,7 +105,112 @@ class PipelineExecutor:
             p.join()
         print("FIM")
 
+class PipelineExecutor_rpc:
+    def __init__(self, producers, nodes):
+        self.producers = producers
+        self.nodes = {node.name: node for node in nodes}
+        self.processes = []
+        self.running = True
+        self.input_queue = Queue()
+        self.output_queues = {node.name: Queue() for node in nodes}
+        self.node_order = self._determine_execution_order()
 
+    def _determine_execution_order(self):
+        """Determina a ordem de execução baseada nas dependências"""
+        order = []
+        remaining_nodes = list(self.nodes.values())
+        
+        while remaining_nodes:
+            added = False
+            for node in remaining_nodes[:]:
+                # Se não tem dependências ou todas as dependências já estão na ordem
+                if not hasattr(node, 'dependencies') or all(dep in [n.name for n in order] for dep in node.dependencies):
+                    order.append(node)
+                    remaining_nodes.remove(node)
+                    added = True
+            
+            if not added and remaining_nodes:
+                raise ValueError("Circular dependency detected in pipeline nodes")
+        
+        return order
+    
+    def get_node(self, node_name):
+        """Retorna o nó com o nome especificado ou None se não encontrado"""
+        for node in self.nodes:
+            if node.name == node_name:
+                return node
+        return None
+    
+    def add_node(self, node):
+        """Adiciona um novo nó ao pipeline"""
+        self.nodes[node.name] = node
+        self.output_queues[node.name] = Queue()
+        self.node_order = self._determine_execution_order()
+        print(f"Added node: {node.name}")
+
+    def start_producers(self):
+        """Inicia todos os producers"""
+        for producer in self.producers:
+            p = Process(target=self._run_producer, args=(producer,))
+            self.processes.append(p)
+            p.start()
+
+    def _run_producer(self, producer):
+        """Executa um producer e coloca resultados na fila"""
+        try:
+            producer.execute()
+            if hasattr(producer, '_output'):
+                self.input_queue.put(producer._output)
+        except Exception as e:
+            print(f"Producer error: {e}")
+
+    def process_nodes(self):
+        """Processa todos os nós do pipeline na ordem correta"""
+        while self.running:
+            # Processa cada nó na ordem determinada
+            for node in self.node_order:
+                try:
+                    # Pega dados da fila de entrada ou da fila do nó anterior
+                    input_queue = self.input_queue if node == self.node_order[0] else self.output_queues[node.dependencies[0]]
+                    input_data = input_queue.get_nowait()
+                    
+                    # Processa os dados
+                    output_data = node.handler.handle(input_data)
+                    
+                    # Coloca na fila de saída para os próximos nós
+                    self.output_queues[node.name].put(output_data)
+                    
+                except queue.Empty:
+                    continue
+                except Exception as e:
+                    #print(f"Error in node {node.name}: {e}")
+                    pass
+
+            time.sleep(0.1)
+
+    def run(self):
+        """Executa o pipeline completo"""
+        self.start_producers()
+        
+        try:
+            # Thread para processar nós
+            processing_thread = threading.Thread(target=self.process_nodes, daemon=True)
+            processing_thread.start()
+            
+            # Mantém o pipeline rodando
+            while self.running:
+                time.sleep(1)
+                
+        except KeyboardInterrupt:
+            self.stop()
+
+    def stop(self):
+        """Para o pipeline"""
+        self.running = False
+        for p in self.processes:
+            if p.is_alive():
+                p.terminate()
+        print("Pipeline stopped")
 
 
 # if __name__ == "__main__":
