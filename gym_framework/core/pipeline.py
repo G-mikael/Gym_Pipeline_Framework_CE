@@ -63,7 +63,6 @@ class PipelineExecutor:
         return len(finished_pids) > 0
 
     def _run_once_mode(self):
-        print("PipelineExecutor: Executando em modo run_once.")
         while not self.queue.empty() or self.active_processes:
             self._cleanup_finished_processes()
             
