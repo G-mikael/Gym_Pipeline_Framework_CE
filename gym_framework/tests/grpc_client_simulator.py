@@ -3,6 +3,18 @@ import random
 import datetime
 from faker import Faker
 import time
+import uuid
+import os
+import sys
+import pytz
+
+# Adiciona o diretório raiz do projeto ao sys.path
+# Isso garante que os módulos do projeto possam ser importados corretamente
+# quando o script é executado como 'python -m gym_framework.tests.grpc_client_simulator'
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '..', '..')) # Sobe dois níveis: tests -> gym_framework -> project_root
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from gym_framework import event_ingestion_service_pb2
 from gym_framework import event_ingestion_service_pb2_grpc
@@ -16,6 +28,17 @@ TRANSACOES_CATEGORIAS = [
     "Alimentação", "Transporte", "Educação", "Saúde",
     "Lazer", "Moradia", "Compras", "Transferências", "Salário", "Outros"
 ]
+
+# Constantes (podem ser ajustadas para testes de carga)
+CLIENT_BATCH_SIZE = 5
+TRANSACTION_BATCH_SIZE = 10 # 2 por cliente, se CLIENT_BATCH_SIZE = 5
+SCORE_BATCH_SIZE = 3
+
+NUM_CLIENT_BATCHES = 2
+NUM_TRANSACTION_BATCHES_PER_CLIENT_BATCH = 1 # Cada lote de clientes gera X lotes de transações
+NUM_SCORE_BATCHES = 2
+
+DEFAULT_SERVER_ADDRESS = 'localhost:50051'
 
 # --- Funções de Geração de Dados (Adaptadas para gRPC messages) ---
 
@@ -86,76 +109,170 @@ def send_score_event(stub, score_data_msg):
         print(f"Erro ao enviar score para CPF {score_data_msg.cpf}: {e}")
         return False
 
+# --- Funções de Envio de Eventos em Batch ---
+def send_client_batch(stub, client_messages):
+    if not client_messages:
+        return
+    batch_id = f"client_batch_{str(uuid.uuid4())[:8]}"
+    emission_ts_iso = datetime.datetime.now(pytz.utc).isoformat()
+    request = event_ingestion_service_pb2.IngestClientsRequest(
+        items=client_messages, 
+        batch_id=batch_id,
+        emission_timestamp_iso=emission_ts_iso
+    )
+    try:
+        print(f"Enviando lote de {len(client_messages)} clientes (Batch ID: {batch_id}, Emissão: {emission_ts_iso})...")
+        start_time = time.monotonic()
+        response = stub.IngestClients(request, timeout=60) # Timeout aumentado para lotes e depuração
+        end_time = time.monotonic()
+        round_trip_duration = end_time - start_time
+        print(f"Resposta do servidor (Clientes - Batch {response.batch_id}): Success={response.success}, Msg='{response.message}', "
+              f"Recebidos={response.items_received}, Processados={response.items_processed_successfully}, "
+              f"Duração Servidor={response.processing_duration_seconds:.4f}s, Round-trip={round_trip_duration:.4f}s")
+    except grpc.RpcError as e:
+        print(f"Erro RPC ao enviar lote de clientes (Batch ID: {batch_id}): {e.code()} - {e.details()}")
+
+def send_transaction_batch(stub, transaction_messages):
+    if not transaction_messages:
+        return
+    batch_id = f"tx_batch_{str(uuid.uuid4())[:8]}"
+    emission_ts_iso = datetime.datetime.now(pytz.utc).isoformat()
+    request = event_ingestion_service_pb2.IngestTransactionsRequest(
+        items=transaction_messages, 
+        batch_id=batch_id,
+        emission_timestamp_iso=emission_ts_iso
+    )
+    try:
+        print(f"Enviando lote de {len(transaction_messages)} transações (Batch ID: {batch_id}, Emissão: {emission_ts_iso})...")
+        start_time = time.monotonic()
+        response = stub.IngestTransactions(request, timeout=60)
+        end_time = time.monotonic()
+        round_trip_duration = end_time - start_time
+        print(f"Resposta do servidor (Transações - Batch {response.batch_id}): Success={response.success}, Msg='{response.message}', "
+              f"Recebidos={response.items_received}, Processados={response.items_processed_successfully}, "
+              f"Duração Servidor={response.processing_duration_seconds:.4f}s, Round-trip={round_trip_duration:.4f}s")
+    except grpc.RpcError as e:
+        print(f"Erro RPC ao enviar lote de transações (Batch ID: {batch_id}): {e.code()} - {e.details()}")
+
+def send_score_batch(stub, score_messages):
+    if not score_messages:
+        return
+    batch_id = f"score_batch_{str(uuid.uuid4())[:8]}"
+    emission_ts_iso = datetime.datetime.now(pytz.utc).isoformat()
+    request = event_ingestion_service_pb2.IngestScoresRequest(
+        items=score_messages, 
+        batch_id=batch_id,
+        emission_timestamp_iso=emission_ts_iso
+    )
+    try:
+        print(f"Enviando lote de {len(score_messages)} scores (Batch ID: {batch_id}, Emissão: {emission_ts_iso})...")
+        start_time = time.monotonic()
+        response = stub.IngestScores(request, timeout=60)
+        end_time = time.monotonic()
+        round_trip_duration = end_time - start_time
+        print(f"Resposta do servidor (Scores - Batch {response.batch_id}): Success={response.success}, Msg='{response.message}', "
+              f"Recebidos={response.items_received}, Processados={response.items_processed_successfully}, "
+              f"Duração Servidor={response.processing_duration_seconds:.4f}s, Round-trip={round_trip_duration:.4f}s")
+    except grpc.RpcError as e:
+        print(f"Erro RPC ao enviar lote de scores (Batch ID: {batch_id}): {e.code()} - {e.details()}")
+
 # --- Lógica Principal da Simulação ---
 
-def run_simulation(stub, num_clients=5, num_transactions_per_client=2, num_scores_to_send=3):
-    print(f"Iniciando simulação: {num_clients} clientes, {num_transactions_per_client} tx/cliente, {num_scores_to_send} scores.")
+def run_simulation(stub, num_client_batches, client_batch_size, 
+                   num_tx_batches_per_client_batch, tx_batch_size, 
+                   num_score_batches, score_batch_size):
+    
+    print(f"Iniciando simulação de batches:")
+    print(f"  Clientes: {num_client_batches} batches de {client_batch_size}")
+    print(f"  Transações: {num_tx_batches_per_client_batch} batches de {tx_batch_size} por batch de cliente")
+    print(f"  Scores: {num_score_batches} batches de {score_batch_size}")
 
-    generated_clients_info = []
     client_id_counter = 1
     transaction_id_counter = 1
+    
+    generated_client_cpfs = [] 
+    generated_client_ids = []
 
-    # 1. Gerar e enviar clientes
-    print("\\n--- Enviando Clientes ---")
-    for i in range(num_clients):
-        client_msg, client_cpf = generate_client_data(client_id_counter)
-        if send_client_event(stub, client_msg):
-            generated_clients_info.append({"id": client_id_counter, "cpf": client_cpf})
-        client_id_counter += 1
-        time.sleep(random.uniform(0.05, 0.2)) # Pequeno delay
+    # 1. Gerar e enviar lotes de clientes
+    print("\n--- Enviando Lotes de Clientes ---")
+    for batch_num in range(num_client_batches):
+        client_messages_batch = []
+        for _ in range(client_batch_size):
+            client_msg, client_cpf = generate_client_data(client_id_counter)
+            client_messages_batch.append(client_msg)
+            generated_client_cpfs.append(client_cpf) 
+            generated_client_ids.append(client_msg.id)  
+            client_id_counter += 1
+        send_client_batch(stub, client_messages_batch)
+        time.sleep(random.uniform(0.1, 0.5))
 
-    if not generated_clients_info:
-        print("Nenhum cliente foi enviado com sucesso. Encerrando simulação.")
+    if not generated_client_ids:
+        print("Nenhum cliente foi gerado/enviado. Encerrando simulação de transações e scores.")
         return
 
-    # 2. Gerar e enviar transações para os clientes criados
-    print("\\n--- Enviando Transações ---")
-    for client_info in generated_clients_info:
-        for _ in range(num_transactions_per_client):
-            transaction_msg = generate_transaction_data(
-                transaction_id_counter,
-                client_info["id"],
-                client_info["cpf"]
-            )
-            send_transaction_event(stub, transaction_msg)
+    print("\n--- Enviando Lotes de Transações ---")
+
+    total_transaction_batches = num_client_batches * num_tx_batches_per_client_batch
+
+    for batch_num in range(total_transaction_batches):
+        transaction_messages_batch = []
+        for _ in range(tx_batch_size):
+            if not generated_client_ids: break
+            random_client_id = random.choice(generated_client_ids)
+            tx_msg = generate_transaction_data(transaction_id_counter, random_client_id, generated_client_cpfs[random_client_id - 1])
+            transaction_messages_batch.append(tx_msg)
             transaction_id_counter += 1
-            time.sleep(random.uniform(0.05, 0.2)) # Pequeno delay
-
-    # 3. Gerar e enviar scores (usando CPFs de clientes aleatórios já criados)
-    print("\\n--- Enviando Scores ---")
-    for _ in range(num_scores_to_send):
-        if generated_clients_info:
-            random_client_info = random.choice(generated_clients_info)
-            score_msg = generate_score_data(random_client_info["cpf"])
-            send_score_event(stub, score_msg)
-            time.sleep(random.uniform(0.05, 0.2)) # Pequeno delay
+        if transaction_messages_batch:
+            send_transaction_batch(stub, transaction_messages_batch)
+            time.sleep(random.uniform(0.1, 0.5))
         else:
-            break # Sem clientes para associar scores
+            break 
 
-    print("\\nSimulação concluída.")
+    print("\n--- Enviando Lotes de Scores ---")
+    if not generated_client_cpfs:
+        print("Nenhum CPF de cliente disponível. Encerrando simulação de scores.")
+    else:
+        for batch_num in range(num_score_batches):
+            score_messages_batch = []
+            for _ in range(score_batch_size):
+                if not generated_client_cpfs: break
+                random_client_cpf = random.choice(generated_client_cpfs)
+                score_msg = generate_score_data(random_client_cpf)
+                score_messages_batch.append(score_msg)
+            if score_messages_batch:
+                send_score_batch(stub, score_messages_batch)
+                time.sleep(random.uniform(0.1, 0.5))
+            else:
+                break
+    
+    print("\nSimulação de envio de batches concluída.")
 
 if __name__ == '__main__':
-    print(f"Conectando ao servidor gRPC em {GRPC_SERVER_ADDRESS}...")
+    server_address = os.getenv("GRPC_SERVER_ADDRESS", DEFAULT_SERVER_ADDRESS)
+    print(f"Conectando ao servidor gRPC em {server_address}...")
     try:
-        channel = grpc.insecure_channel(GRPC_SERVER_ADDRESS)
-        try:
-            grpc.channel_ready_future(channel).result(timeout=5)
-            print("Canal gRPC conectado com sucesso.")
-        except grpc.FutureTimeoutError:
-            print(f"Falha ao conectar ao servidor gRPC em {GRPC_SERVER_ADDRESS} após timeout. Verifique se o servidor está rodando.")
-            exit(1)
-            
-        stub = event_ingestion_service_pb2_grpc.EventIngestionServiceStub(channel)
+        if __package__ is None or __package__ == '':
+            pass 
+        from gym_framework import event_ingestion_service_pb2_grpc # type: ignore
 
-        num_sim_clients = 10
-        num_sim_transactions_per_client = 5
-        num_sim_scores = 7
+    except ImportError as e:
+        print(f"Erro de importação ao tentar carregar stubs gRPC: {e}")
+        print("Certifique-se que os stubs gRPC foram gerados e estão no PYTHONPATH.")
+        print(f"sys.path: {sys.path}")
+        print(f"__name__: {__name__}, __package__: {__package__}")
+        exit(1)
 
-        run_simulation(stub, num_sim_clients, num_sim_transactions_per_client, num_sim_scores)
+    channel = grpc.insecure_channel(server_address)
+    stub = event_ingestion_service_pb2_grpc.EventIngestionServiceStub(channel)
+    print("Conexão estabelecida.")
 
-    except Exception as e:
-        print(f"Um erro ocorreu durante a execução do cliente gRPC: {e}")
+    try:
+        run_simulation(stub, 
+                       NUM_CLIENT_BATCHES, CLIENT_BATCH_SIZE, 
+                       NUM_TRANSACTION_BATCHES_PER_CLIENT_BATCH, TRANSACTION_BATCH_SIZE,
+                       NUM_SCORE_BATCHES, SCORE_BATCH_SIZE)
+    except KeyboardInterrupt:
+        print("\nSimulação interrompida pelo usuário.")
     finally:
-        if 'channel' in locals() and channel:
-            channel.close()
-            print("Canal gRPC fechado.")
+        channel.close()
+        print("Conexão fechada.")

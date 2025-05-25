@@ -4,23 +4,30 @@ from gym_framework.handlers.handler import *
 from gym_framework.handlers.producer import *
 from multiprocessing import Queue
 import queue  
+import time
 
 
 class PipelineExecutor:
-    def __init__(self, productores, nodes):
+    def __init__(self, productores, nodes, run_once=False):
         self.productores = productores
         self.nodes = nodes
         self.node_queue = {node.name: Queue() for node in nodes}
         self.node_list = {node.name: node for node in nodes}
         self.queue = Queue()
-        self.processes = []
+        self.active_processes = {}
+        self.run_once = run_once
+        self.max_idle_default = 11
 
     def start(self):
+        if self.run_once:
+            print("PipelineExecutor: start() chamado em modo run_once. Isso geralmente não é esperado. Chamando run() diretamente.")
+            self.run()
+            return
+
         for productor in self.productores:
-            for i in range(1):
-                p = Process(target=productor.run, args=(None, self.queue, self.node_queue))
-                self.processes.append(p)
-                p.start()
+            p = Process(target=productor.run, args=(None, self.queue, self.node_queue))
+            p.start()
+            self.active_processes[p.pid] = p
         
         self.run()
 
@@ -40,34 +47,103 @@ class PipelineExecutor:
         if queue: self.node_queue[node.name] = Queue()
 
     def run(self):
-        idle_time = 0
-        max_idle = 11  # segundos de espera antes de desistir
+        if self.run_once:
+            self._run_once_mode()
+        else:
+            self._run_continuous_mode()
+
+    def _cleanup_finished_processes(self):
+        finished_pids = []
+        for pid, proc in self.active_processes.items():
+            if not proc.is_alive():
+                proc.join(timeout=0.1)
+                finished_pids.append(pid)
         
-        while True:
-            for p in self.processes[:]:
-                if not p.is_alive():
-                    p.join()
-                    self.processes.remove(p)
+        for pid in finished_pids:
+            del self.active_processes[pid]
+        return len(finished_pids) > 0
+
+    def _run_once_mode(self):
+        print("PipelineExecutor: Executando em modo run_once.")
+        while not self.queue.empty() or self.active_processes:
+            self._cleanup_finished_processes()
             
             try:
-                item = self.queue.get(timeout=1)  # espera por até 1s
-                idle_time = 0  # reset idle
+                item_name = self.queue.get(block=True, timeout=0.1) 
+                
+                if item_name in self.node_list:
+                    node_to_run = self.node_list[item_name]
+                    input_data_queue_for_node = self.node_queue.get(node_to_run.name)
 
-                node = self.node_list[item]  
-                input_queue = self.node_queue.get(node.name)  
+                    p = Process(target=node_to_run.run, args=(input_data_queue_for_node, self.queue, self.node_queue))
+                    p.start()
+                    self.active_processes[p.pid] = p
+                else:
+                    print(f"PipelineExecutor: Aviso - Nome do nó '{item_name}' não encontrado na node_list.")
 
+            except queue.Empty:
+                if not self.active_processes:
+                    break
+                time.sleep(0.05) 
+            except Exception as e:
+                print(f"PipelineExecutor (run_once): Erro ao processar item da fila: {e}")
+                time.sleep(0.1)
 
-                p = Process(target=node.run, args=(input_queue, self.queue, self.node_queue))
-                self.processes.append(p)
-                p.start()
+        for pid, proc in list(self.active_processes.items()):
+            if proc.is_alive():
+                proc.join(timeout=1)
+            if proc.is_alive():
+                print(f"PipelineExecutor (run_once): Processo {pid} ainda vivo após join. Tentando terminar.")
+                proc.terminate()
+                proc.join(timeout=0.5)
+            self._cleanup_finished_processes()
+
+        print("PipelineExecutor: Modo run_once concluído.")
+
+    def _run_continuous_mode(self):
+        print("PipelineExecutor: Executando em modo contínuo.")
+        idle_time = 0
+        max_idle = self.max_idle_default
+        
+        while True:
+            cleaned_any = self._cleanup_finished_processes()
+            if cleaned_any:
+                idle_time = 0
+            
+            try:
+                item_name = self.queue.get(block=True, timeout=1)
+                idle_time = 0
+
+                if item_name in self.node_list:
+                    node_to_run = self.node_list[item_name]
+                    input_data_queue_for_node = self.node_queue.get(node_to_run.name)
+                    
+                    p = Process(target=node_to_run.run, args=(input_data_queue_for_node, self.queue, self.node_queue))
+                    p.start()
+                    self.active_processes[p.pid] = p
+                else:
+                    print(f"PipelineExecutor: Aviso (contínuo) - Nó '{item_name}' não encontrado.")
+
             except queue.Empty:
                 idle_time += 1
-                if idle_time >= max_idle:
+                if not self.active_processes and idle_time >= max_idle:
+                    print(f"PipelineExecutor: Ocioso por {idle_time}s sem tarefas ou processos ativos. Encerrando.")
                     break
+                elif self.active_processes:
+                    idle_time = 0 
+                    time.sleep(0.1)
+                elif idle_time < max_idle :
+                    pass
 
-        for p in self.processes:
-            p.join()
-        print("FIM")
+        for pid, proc in list(self.active_processes.items()):
+             if proc.is_alive():
+                proc.join(timeout=1)
+             if proc.is_alive():
+                print(f"PipelineExecutor (contínuo): Processo {pid} ainda vivo. Terminando.")
+                proc.terminate()
+                proc.join(timeout=0.5)
+        self._cleanup_finished_processes()
+        print("PipelineExecutor: Modo contínuo finalizado.")
 
 
 

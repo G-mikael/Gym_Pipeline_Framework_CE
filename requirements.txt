@@ -2,3 +2,8 @@
 scikit-learn
 numpy
 faker
+pytz
+grpcio
+grpcio-tools
+protobuf
+matplotlib
