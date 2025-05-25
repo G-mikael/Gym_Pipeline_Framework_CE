@@ -20,7 +20,6 @@ class PipelineExecutor:
 
     def start(self):
         if self.run_once:
-            print("PipelineExecutor: start() chamado em modo run_once. Isso geralmente não é esperado. Chamando run() diretamente.")
             self.run()
             return
 
