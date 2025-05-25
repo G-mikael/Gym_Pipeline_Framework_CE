@@ -33,16 +33,38 @@ message ScoreData {
     string data_ultima_atualizacao = 5;// "data_ultima_atualizacao": ...strftime("%Y-%m-%d")
 }
 
+// --- Mensagens de Request para Batches ---
+message IngestClientsRequest {
+    repeated ClientData items = 1;
+    string batch_id = 2; // ID para rastreamento do lote
+    string emission_timestamp_iso = 3; // Timestamp ISO 8601 da emissão do lote pelo cliente
+}
+
+message IngestTransactionsRequest {
+    repeated TransactionData items = 1;
+    string batch_id = 2; // ID para rastreamento do lote
+    string emission_timestamp_iso = 3; // Timestamp ISO 8601 da emissão do lote pelo cliente
+}
+
+message IngestScoresRequest {
+    repeated ScoreData items = 1;
+    string batch_id = 2; // ID para rastreamento do lote
+    string emission_timestamp_iso = 3; // Timestamp ISO 8601 da emissão do lote pelo cliente
+}
+
 // Resposta padrão para as chamadas de ingestão
 message IngestionResponse {
     bool success = 1;
     string message = 2;
-    string event_id = 3; // ID para rastreamento no teste de carga
+    string batch_id = 3; // ID do lote processado (ecoando o batch_id do request ou um novo gerado pelo servidor)
+    int32 items_received = 4;
+    int32 items_processed_successfully = 5; // Opcional: para feedback mais granular
+    float processing_duration_seconds = 6; // Tempo que o servidor levou para processar o lote
 }
 
 // Serviço de ingestão de eventos
 service EventIngestionService {
-    rpc IngestClient(ClientData) returns (IngestionResponse);
-    rpc IngestTransaction(TransactionData) returns (IngestionResponse);
-    rpc IngestScore(ScoreData) returns (IngestionResponse);
+    rpc IngestClients(IngestClientsRequest) returns (IngestionResponse);
+    rpc IngestTransactions(IngestTransactionsRequest) returns (IngestionResponse);
+    rpc IngestScores(IngestScoresRequest) returns (IngestionResponse);
 }

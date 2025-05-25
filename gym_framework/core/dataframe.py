@@ -63,13 +63,15 @@ class Dataframe:
     
     def add_column(self, column_name : str, new_column_data : list):
         """
-        Adiciona uma nova coluna ao dataframe
+        Adiciona uma nova coluna ao dataframe. Se a coluna já existir, seus valores são atualizados.
         """
         try:
             if len(new_column_data) != self.shape()[0]:
                 raise ValueError("O tamanho da nova coluna não corresponde ao número de linhas.")
             
-            self.columns.append(column_name)
+            if column_name not in self.columns:
+                self.columns.append(column_name)
+            
             for item, row in zip(new_column_data, self.data):
                 row[column_name] = item
 

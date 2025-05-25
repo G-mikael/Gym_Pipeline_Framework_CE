@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from . import event_ingestion_service_pb2 as event__ingestion__service__pb2 #linha alterada para importar o arquivo corretamente
+from . import event_ingestion_service_pb2 as event__ingestion__service__pb2
 
 GRPC_GENERATED_VERSION = '1.71.0'
 GRPC_VERSION = grpc.__version__
@@ -35,19 +35,19 @@ class EventIngestionServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.IngestClient = channel.unary_unary(
-                '/gym_framework_rpc.EventIngestionService/IngestClient',
-                request_serializer=event__ingestion__service__pb2.ClientData.SerializeToString,
+        self.IngestClients = channel.unary_unary(
+                '/gym_framework_rpc.EventIngestionService/IngestClients',
+                request_serializer=event__ingestion__service__pb2.IngestClientsRequest.SerializeToString,
                 response_deserializer=event__ingestion__service__pb2.IngestionResponse.FromString,
                 _registered_method=True)
-        self.IngestTransaction = channel.unary_unary(
-                '/gym_framework_rpc.EventIngestionService/IngestTransaction',
-                request_serializer=event__ingestion__service__pb2.TransactionData.SerializeToString,
+        self.IngestTransactions = channel.unary_unary(
+                '/gym_framework_rpc.EventIngestionService/IngestTransactions',
+                request_serializer=event__ingestion__service__pb2.IngestTransactionsRequest.SerializeToString,
                 response_deserializer=event__ingestion__service__pb2.IngestionResponse.FromString,
                 _registered_method=True)
-        self.IngestScore = channel.unary_unary(
-                '/gym_framework_rpc.EventIngestionService/IngestScore',
-                request_serializer=event__ingestion__service__pb2.ScoreData.SerializeToString,
+        self.IngestScores = channel.unary_unary(
+                '/gym_framework_rpc.EventIngestionService/IngestScores',
+                request_serializer=event__ingestion__service__pb2.IngestScoresRequest.SerializeToString,
                 response_deserializer=event__ingestion__service__pb2.IngestionResponse.FromString,
                 _registered_method=True)
 
@@ -56,19 +56,19 @@ class EventIngestionServiceServicer(object):
     """Serviço de ingestão de eventos
     """
 
-    def IngestClient(self, request, context):
+    def IngestClients(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def IngestTransaction(self, request, context):
+    def IngestTransactions(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def IngestScore(self, request, context):
+    def IngestScores(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -77,19 +77,19 @@ class EventIngestionServiceServicer(object):
 
 def add_EventIngestionServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'IngestClient': grpc.unary_unary_rpc_method_handler(
-                    servicer.IngestClient,
-                    request_deserializer=event__ingestion__service__pb2.ClientData.FromString,
+            'IngestClients': grpc.unary_unary_rpc_method_handler(
+                    servicer.IngestClients,
+                    request_deserializer=event__ingestion__service__pb2.IngestClientsRequest.FromString,
                     response_serializer=event__ingestion__service__pb2.IngestionResponse.SerializeToString,
             ),
-            'IngestTransaction': grpc.unary_unary_rpc_method_handler(
-                    servicer.IngestTransaction,
-                    request_deserializer=event__ingestion__service__pb2.TransactionData.FromString,
+            'IngestTransactions': grpc.unary_unary_rpc_method_handler(
+                    servicer.IngestTransactions,
+                    request_deserializer=event__ingestion__service__pb2.IngestTransactionsRequest.FromString,
                     response_serializer=event__ingestion__service__pb2.IngestionResponse.SerializeToString,
             ),
-            'IngestScore': grpc.unary_unary_rpc_method_handler(
-                    servicer.IngestScore,
-                    request_deserializer=event__ingestion__service__pb2.ScoreData.FromString,
+            'IngestScores': grpc.unary_unary_rpc_method_handler(
+                    servicer.IngestScores,
+                    request_deserializer=event__ingestion__service__pb2.IngestScoresRequest.FromString,
                     response_serializer=event__ingestion__service__pb2.IngestionResponse.SerializeToString,
             ),
     }
@@ -105,7 +105,7 @@ class EventIngestionService(object):
     """
 
     @staticmethod
-    def IngestClient(request,
+    def IngestClients(request,
             target,
             options=(),
             channel_credentials=None,
@@ -118,8 +118,8 @@ class EventIngestionService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/gym_framework_rpc.EventIngestionService/IngestClient',
-            event__ingestion__service__pb2.ClientData.SerializeToString,
+            '/gym_framework_rpc.EventIngestionService/IngestClients',
+            event__ingestion__service__pb2.IngestClientsRequest.SerializeToString,
             event__ingestion__service__pb2.IngestionResponse.FromString,
             options,
             channel_credentials,
@@ -132,7 +132,7 @@ class EventIngestionService(object):
             _registered_method=True)
 
     @staticmethod
-    def IngestTransaction(request,
+    def IngestTransactions(request,
             target,
             options=(),
             channel_credentials=None,
@@ -145,8 +145,8 @@ class EventIngestionService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/gym_framework_rpc.EventIngestionService/IngestTransaction',
-            event__ingestion__service__pb2.TransactionData.SerializeToString,
+            '/gym_framework_rpc.EventIngestionService/IngestTransactions',
+            event__ingestion__service__pb2.IngestTransactionsRequest.SerializeToString,
             event__ingestion__service__pb2.IngestionResponse.FromString,
             options,
             channel_credentials,
@@ -159,7 +159,7 @@ class EventIngestionService(object):
             _registered_method=True)
 
     @staticmethod
-    def IngestScore(request,
+    def IngestScores(request,
             target,
             options=(),
             channel_credentials=None,
@@ -172,8 +172,8 @@ class EventIngestionService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/gym_framework_rpc.EventIngestionService/IngestScore',
-            event__ingestion__service__pb2.ScoreData.SerializeToString,
+            '/gym_framework_rpc.EventIngestionService/IngestScores',
+            event__ingestion__service__pb2.IngestScoresRequest.SerializeToString,
             event__ingestion__service__pb2.IngestionResponse.FromString,
             options,
             channel_credentials,
