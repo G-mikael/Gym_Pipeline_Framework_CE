@@ -1,19 +1,25 @@
-from multiprocessing import Process
+from multiprocessing import Process, Semaphore
 from gym_framework.handlers.base_handler import HandlerNode
 from gym_framework.handlers.handler import *
 from gym_framework.handlers.producer import *
-from multiprocessing import Queue
+from multiprocessing import Queue, cpu_count
 import queue  
 
 
 class PipelineExecutor:
-    def __init__(self, productores, nodes):
+    def __init__(self, productores, nodes, max_cores = None, max_processes=None):
         self.productores = productores
         self.nodes = nodes
         self.node_queue = {node.name: Queue() for node in nodes}
         self.node_list = {node.name: node for node in nodes}
         self.queue = Queue()
         self.processes = []
+        self.max_cores = max_cores or cpu_count()
+        self.max_processes = max_processes or max(1, cpu_count() - 1)
+        self.semaphore = Semaphore(self.max_processes)
+
+        for node in self.nodes:
+            node.set_max_cores(self.max_cores)
 
     def start(self):
         for productor in self.productores:
@@ -26,6 +32,7 @@ class PipelineExecutor:
 
     def enqueue_producer(self, handler_node: HandlerNode, data = None):
         name = handler_node.name
+        handler_node.set_max_cores(self.max_cores)
         self.queue.put(name)
         if data: self.node_queue[name].put(data)
 
@@ -44,20 +51,21 @@ class PipelineExecutor:
         max_idle = 11  # segundos de espera antes de desistir
         
         while True:
-            for p in self.processes[:]:
+            for p in self.processes[:]:                     # Remove processos que já terminaram
                 if not p.is_alive():
                     p.join()
                     self.processes.remove(p)
             
             try:
-                item = self.queue.get(timeout=1)  # espera por até 1s
-                idle_time = 0  # reset idle
+                item = self.queue.get(timeout=1)    # espera por até 1s
+                idle_time = 0                       # reset idle
 
                 node = self.node_list[item]  
-                input_queue = self.node_queue.get(node.name)  
+                input_queue = self.node_queue.get(node.name) 
 
+                self.semaphore.acquire()
 
-                p = Process(target=node.run, args=(input_queue, self.queue, self.node_queue))
+                p = Process(target=node.run, args=(input_queue, self.queue, self.node_queue, self.semaphore))
                 self.processes.append(p)
                 p.start()
             except queue.Empty:

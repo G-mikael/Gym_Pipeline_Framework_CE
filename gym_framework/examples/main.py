@@ -39,12 +39,10 @@ if __name__ == "__main__":
                                      parallel=paralelo)
     classifier_node = HandlerNode("ClassifierHandler",
                                   ClassifierHandler(),
-                                  dependencies=[new_transactions_produto_node, trigger_transactions_produto_node],
-                                  parallel=paralelo)
+                                  dependencies=[new_transactions_produto_node, trigger_transactions_produto_node])
     risk_classifier_node = HandlerNode("RiskClassifierHandler", 
                                    RiskTransactionClassifierHandler(), 
-                                   dependencies=[new_transactions_produto_node],
-                                   parallel=paralelo)
+                                   dependencies=[new_transactions_produto_node])
     save_node_csv = HandlerNode("SaveToCSVHandler",
                             SaveToCSVHandler(),
                             dependencies=[risk_classifier_node])
@@ -79,8 +77,8 @@ if __name__ == "__main__":
         [],
         [transformador_node, classifier_node, save_node_csv, calculete_node, 
          risk_classifier_node, save_to_db_node, calculate_most_transactions_node, transaction_type_count_node, 
-         risk_percentage_node, currency_volume_node]
-
+         risk_percentage_node, currency_volume_node],
+         max_cores = 8
     )
     
 
@@ -110,6 +108,8 @@ if __name__ == "__main__":
     elapsed = end_time - start_time
 
     print(f"Pipeline finalizou em {elapsed:.4f} segundos.")
+    minutes, seconds = divmod(elapsed, 60)
+    print(f"Pipeline finalizou em {int(minutes)} minuto(s) e {seconds:.2f} segundo(s).")
 
     external_simulator_process.join()
 

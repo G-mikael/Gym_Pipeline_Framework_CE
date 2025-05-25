@@ -85,7 +85,7 @@ class TriggerTransactionsProducerHandler(BaseHandler):
     def handle(self, data=None):
         print(f"[TriggerTransactionsProducerHandler] Gerando novas transações... {self.id_transaction}") # Resolver ID
 
-        trans = generate_transactions(self.new_transactions, self.id_transaction)
+        trans = generate_transactions(self.new_transactions, self.id_transaction, new=True)
         dict_source = DictSource(trans)
         dict_extractor = dict_source.get_extractor()
         df_dict = dict_extractor.extract()

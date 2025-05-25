@@ -38,9 +38,9 @@ class HandlerNode:
         self.name = name
         self.handler = handler
         self.dependencies = dependencies or []
-        self.parallel = parallel  # habilita paralelismo no handler
-        self.chunks = chunks      # em quantas partes dividir
-
+        self.parallel = parallel        # habilita paralelismo no handler
+        self.chunks = chunks            # em quantas partes dividir
+        self.max_cores = cpu_count()    # padrão: usa todos os disponíveis
         self.output_nodes = []
 
         # Conecta as dependências
@@ -57,7 +57,10 @@ class HandlerNode:
         for name, _ in context.dependencies:
             context.queue[name].put(data)
             context.pipeline_queue.put(name)
-            print(f"\tEnviado para [{name}]") # Tirar print do handler
+            print(f"\tEnviado para [{name}]")
+
+    def set_max_cores(self, max_cores):
+        self.max_cores = max_cores
 
     def split_data(self, data):
         """Divide um Dataframe em chunks iguais."""
@@ -79,7 +82,9 @@ class HandlerNode:
 
     def parallel_handle(self, data):
         chunks = self.split_data(data)
-        with Pool(processes=min(cpu_count(), self.chunks)) as pool:
+        num_processes = min(self.max_cores, len(chunks))
+        
+        with Pool(processes=num_processes) as pool:
             results = pool.map(self.process_chunk, chunks)
 
         if isinstance(data, Dataframe):
@@ -91,7 +96,8 @@ class HandlerNode:
             return results
 
 
-    def run(self, node_queue = None, pipeline_queue = None, queue = None):
+
+    def run(self, node_queue = None, pipeline_queue = None, queue = None, semaphore = None):
         pid = os.getpid()
         print(f"[{self.name} | PID {pid}] Iniciando...")
 
@@ -117,3 +123,4 @@ class HandlerNode:
 
         self.handler.pos_message(result)
         print(f"[{self.name} | PID {pid}] Finalizou em {elapsed:.4f} segundos.")
+        semaphore.release()
