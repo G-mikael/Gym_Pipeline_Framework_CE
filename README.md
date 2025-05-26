@@ -115,10 +115,51 @@ gym_framework/
 setup.py           # Script de instalação do pacote
 ```
 
----
+## 📈 Teste de Carga com gRPC
+
+O sistema oferece um teste de carga para avaliar o desempenho do pipeline utilizando chamadas gRPC. Esse teste simula múltiplos clientes e mede o tempo médio de resposta (round-trip time) para diferentes níveis de concorrência.
+
+### 🛠️ Pré-requisitos
+
+* Python 3.x instalado
+* Dependências instaladas com:
+
+```bash
+pip install -r requirements.txt
+```
+
+### 🚀 Etapas para Rodar o Teste de Carga
+
+#### 1. Iniciar o Servidor gRPC
+
+Abra um terminal e execute:
+
+```bash
+cd Gym_Pipeline_Framework_CE
+python -m gym_framework.rpc_server
+```
+
+Esse comando iniciará o servidor gRPC que irá processar as requisições simuladas de carga. **Deixe este terminal aberto durante todo o teste.**
+
+#### 2. Executar o Orquestrador do Teste de Carga
+
+Em outro terminal:
+
+```bash
+cd Gym_Pipeline_Framework_CE
+python orchestrate_load_test.py
+```
+
+Esse script realiza os seguintes passos automaticamente:
+
+* Executa `run_load_test.py` para diferentes quantidades de clientes simuladores (conforme definido em `CLIENT_COUNTS_TO_TEST` dentro de `orchestrate_load_test.py`);
+* Gera logs temporários em `load_test_logs/` para cada execução e os organiza posteriormente em `load_test_run_results/logs_<N>_clients/`;
+* Chama `process_logs.py` para analisar os logs e calcular o tempo médio de round-trip para cada quantidade de clientes;
+* Exibe os resultados no console.
 
 ## 👨‍💻 Autores
 
+- Gabriel
 - George
 - Yoni 
 - Mikael   
